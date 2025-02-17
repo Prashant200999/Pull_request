@@ -18,7 +18,7 @@ In modern software development, managing code repositories effectively is crucia
 ## **Mono Repo**
 A **monorepo**, short for "monolithic repository," is an approach where multiple projects or components are stored within a single repository. In the context of a project with a backend and frontend, the codebases for both the backend and frontend would reside in a single monorepo.
 
-#### Related Resources
+
 **Please refer to the reference link mentioned below**
 | Link         | Description         |
 |--------------|------------------------|
@@ -27,7 +27,7 @@ A **monorepo**, short for "monolithic repository," is an approach where multiple
 ## **Micro Repo**
 **Microrepos**, or "microservices repositories," involve maintaining separate repositories for each microservice or component of a project. In the case of a backend and frontend project, there would be a dedicated repository for the backend and another for the frontend.
 
-#### Related Resources
+
 **Please refer to the reference link mentioned below**
 | Link         | Description         |
 |--------------|------------------------|
