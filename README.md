@@ -14,6 +14,7 @@
 - [Contact Information](#contact-information)
 - [References](#references)
 
+
 # ***Introduction***
 In modern software development, managing code repositories effectively is crucial for maintaining productivity and scalability. Two popular approaches for organizing repositories are the **monorepo** and **microrepo** strategies.
 
@@ -50,6 +51,10 @@ A **monorepo**, short for "monolithic repository," is an approach where multiple
 | **Access Control**              | Good for wide access to most code.                                           |Better for limiting access to specific projects.      |
 | **Build Efficiency**               | 	Slower as repo grows.                             | Faster builds due to smaller repos.                  |
 | **Management Ease**               | Easier for a single repo, harder as teams grow.           | Easier for managing smaller, simpler repos.  |
+
+
+<img width="616" alt="Screenshot 2025-02-18 at 1 39 15 AM" src="https://github.com/user-attachments/assets/8b88334e-881c-472f-ab1e-a9895f6ef2f2" />
+
 
 ## **Conclusion**
 We’re using a **Micro-Repo** setup to make development smoother. Each team works on its own project, without depending on others. This speeds up development and makes it more efficient. It also helps teams stay flexible and work together better as project needs change. The system is like a set of separate building blocks, making it easier to fix problems and reducing the chance that one issue will affect everything else.
