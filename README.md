@@ -8,20 +8,20 @@
 
 ---
 ## Table of Contents
-- [Introduction](#introduction)
+1. [Introduction](#introduction)
     - [What is Scylladb](what-is-scylladb)
     - [Why we choose scylladb](why-we-choose-scylladb)
-- [Features](#features)
-- [System Requirements](#system-requirements)
-- [Important Ports](#important-ports)
-- [Architecture](#architecture)
-- [Advantages](#advantages)
-- [Disdvantages](#disadvantages)
-- [Installation](#installation)
-- [Use Cases](#use-cases)
-- [Conclusion](#conclusion)
-- [Contacts](#contacts)
-- [References](#references)
+2. [Features](#features)
+3. [System Requirements](#system-requirements)
+4. [Important Ports](#important-ports)
+5. [Architecture](#architecture)
+6. [Advantages](#advantages)
+7. [Disdvantages](#disadvantages)
+8. [Installation](#installation)
+9. [Use Cases](#use-cases)
+10. [Conclusion](#conclusion)
+11. [Contacts](#contacts)
+12. [References](#references)
 
 
 ## Introduction
