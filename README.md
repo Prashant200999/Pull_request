@@ -1,3 +1,5 @@
+![LOGO](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSE99tPPOjF3NdHhrPPetiVo0MR-s1Mhm4oeQ&s)
+
 # **Conclusion Documentation of *Monorepo vs Micro Repo***
 
 | **Author** | **Created on**      | **Version** | **Last updated by** | **Internal Reviewer** | **Reviewer L0** | **Reviewer L1** | **Reviewer L2** |
