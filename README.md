@@ -1,122 +1,81 @@
-![ScyllaDBLogo](https://avatars.githubusercontent.com/u/14364730?s=200&v=4)
 
-# ScyllaDB Documentation
+# **Conclusion Documentation of *Monorepo vs Micro Repo***
 
-| **Author** | **Created on** | **Version** | **Last updated by** | **Internal Reviewer** | **Reviewer L0** | **Reviewer L1** | **Reviewer L2** |
-|------------|----------------|-------------|----------------------|-----------------------|----------------|----------------|----------------|
-| Prashant Sharma | 17-02-2025    | version-1   | Prashant Sharma | Siddharth Pawar |                |                |                |
+
+| **Author** | **Created on**      | **Version** | **Last updated by** | **Internal Reviewer** | **Reviewer L0** | **Reviewer L1** | **Reviewer L2** |
+|------------|---------------------|-------------|----------------------|-----------------------|----------------|----------------|----------------|
+| Prashant Sharma | 17-02-2025        | Version-1   | Prashant Sharma | Siddharth Pawar |                |                |                |
+
+## **Table of Contents**
+- [Introduction](#introduction)
+- [Mono Repo](#mono-repo)
+- [Micro Repo](#micro-repo)
+- [Conclusion](#conclusion)
+- [Contact Information](#contact-information)
+- [References](#references)
+
+
+
+
+# ***Introduction***
+In modern software development, managing code repositories effectively is crucial for maintaining productivity and scalability. Two popular approaches for organizing repositories are the **monorepo** and **microrepo** strategies.
+
+
+## **Mono Repo**
+A **monorepo**, short for "monolithic repository," is an approach where multiple projects or components are stored within a single repository. In the context of a project with a backend and frontend, the codebases for both the backend and frontend would reside in a single monorepo.
+
+#### Related Resources
+**Please refer to the reference link mentioned below**
+| Link         | Description         |
+|--------------|------------------------|
+| [Mono repo](https://github.com/Snaatak-Skyops/Documentation/blob/f646c411c9b0cc26b5264ad71897f1aa637d9d0e/VCS%20Design%20%2B%20POC/Mono%20and%20Micro/Mono%20Repository%20Features/Detailed%20Documentation/README.md) | Mono repo Features| 
 
 ---
-## Table of Contents
-1. [Introduction](#introduction)
-    - [What is Scylladb](what-is-scylladb)
-    - [Why we choose scylladb](why-we-choose-scylladb)
-2. [Features](#features)
-3. [System Requirements](#system-requirements)
-4. [Important Ports](#important-ports)
-5. [Architecture](#architecture)
-6. [Advantages](#advantages)
-7. [Disdvantages](#disadvantages)
-8. [Installation](#installation)
-9. [Use Cases](#use-cases)
-10. [Conclusion](#conclusion)
-11. [Contacts](#contacts)
-12. [References](#references)
-
-
-## Introduction
-## What is ScyllaDB?
-
-ScyllaDB is a fast and scalable NoSQL database that can handle a lot of data and process it quickly. It was created as an alternative to Apache Cassandra, but it is built to perform better and use resources more efficiently. ScyllaDB is written in C++ to make the most of modern computer hardware. It's perfect for applications that need to manage large amounts of data and handle high traffic without slowing down.
-
-## Why we choose Scylladb in Employee API?
-We chose ScyllaDB for the Employee API because it can handle all types of data, whether it's organized or not. It's fast and reliable, making it great for managing large amounts of employee information like IDs, names, emails, phone numbers, and job roles. It also handles heavy traffic without slowing down. ScyllaDB works well with Redis, which helps speed up the API by storing frequently accessed data in memory. Since ScyllaDB can easily scale and perform in real time, our API remains quick and responsive.
-## Features 
-
-|       Features     |             Description                     |
-|--------------------|-----------------------------------------|
-| **Scalability**   | ScyllaDB can handle more data and growing workloads by adding more resources.               | 
-| **Performance**   | ScyllaDB provides fast data processing, making it great for applications that need high speed.        |
-| **Fault Tolerance**   | It keeps your data safe and available, even if some parts of the system fail, by storing copies of the data in multiple places. |
-| **Flexibility**     | It can work with different types of applications, letting you organize data in many ways.  |
-| **Community and Enterprise Support**     | It is available in both open-source and enterprise editions. |  
-
-
-## System Requirements 
-
-|   System Requirement              |             Minimum                     |
-|-----------------------------------|-----------------------------------------|
-| Processor                         |         Dual-Core  / t2.medium instance                     | 
-| RAM                               |            4 GB                         |
-| Disk Space                        |            20 GB                        |
-| OS Required (Linux Distributions) | Ubuntu 22.04 & above |
+## **Micro Repo**
+**Microrepos**, or "microservices repositories," involve maintaining separate repositories for each microservice or component of a project. In the case of a backend and frontend project, there would be a dedicated repository for the backend and another for the frontend.
 
 
 
-## Important Ports
+#### Related Resources
+**Please refer to the reference link mentioned below**
+| Link         | Description         |
+|--------------|------------------------|
+| [Micro repo](https://github.com/Snaatak-Skyops/Documentation/blob/498ee68a773e819beb952080ad8674658edf9e4f/VCS%20Design%20%2B%20POC/Mono%20and%20Micro/Micro%20Repository%20Features/Detailed%20Documentation/README.md) | Micro repo Features|
 
- | Port   | Description                  |
-|--------|------------------------------|
-| 7000   | Inter-node communication     |
-| 7001   | TLS inter-node communication |
-| 7199   | JMX monitoring                |
-| 9042   | CQL native transport          |
-| 9142   | SSL CQL native transport      |
-| 9160   | Thrift client API             |
+ 
+## **Comparison: Monorepo vs Micro Repo**
 
-
-## Architecture
-
-- **Sharded Architecture:** ScyllaDB divides the data into smaller parts called "shards." Each CPU core is in charge of one or more of these shards. This way, there’s no need for a central controller, which helps ScyllaDB scale better and work faster.
-- **Data Model:** cyllaDB organizes data in tables, like a spreadsheet with rows and columns. Each piece of data is identified by a primary key, which is made up of a "partition key"  and optional "clustering columns".
-- **Replication and Consistency:** ScyllaDB allows you to choose how consistent you want your data to be, balancing between making sure the data is always available and keeping it in sync across multiple places.
-- **Write and Read Path:** When data is written, it's first stored in memory (MemTable) for quick access, and later saved to disk (SSTable). For reading data, ScyllaDB combines data in memory and on disk, using tools like Bloom Filters to make the process fast and efficient.
-
-
-## Advantages 
-
-- **High Performance**: ScyllaDB is optimized for low-latency and high-throughput workloads, ensuring fast data processing.
-- **Scalable**: It can easily scale horizontally, meaning it can handle more data and traffic by simply adding more resources.  
-- **Fault Tolerant**: ScyllaDB has independent nodes with automatic data replication, which ensures high availability even if some parts of the system fail.
-- **Cassandra Compatibility**: It is easy for users familiar with Cassandra to migrate to ScyllaDB.
-- **Flexible**: ScyllaDB allows dynamic scaling without downtime, meaning you can add or remove resources without interrupting service.                        
-           
----
-
-## Disadvantages 
-- **Resource Intensive**: To achieve optimal performance, ScyllaDB requires a significant amount of CPU and memory.
-- **Complex Setup**: The initial setup and configuration can be tricky and might require fine-tuning to work properly. 
-- **Smaller Ecosystem**: Compared to Cassandra, ScyllaDB has fewer third-party tools and a smaller community for support.
-- **Learning Curve**: New users may face a learning curve to understand ScyllaDB’s unique architecture.
+| **Aspect**                  | **Monorepo**                                                                         | **Micro Repo**                                                                 |
+|-----------------------------|---------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| **Code Sharing**             | Great when many projects share code.                   | Better for projects with little shared code.              |
+| **Team Collaboration**       | Best for teams that work closely together.                    | Best for teams that work separately.               |
+| **Dependency Management**    | Good for managing everything in one place.                                 | Better when each project manages its own.          |
+| **Scalability**              | 	Works for small to medium projects, harder as it grows.        | Best for big teams with independent projects.                      |
+| **CI/CD & CI checks**        | Easy with one testing setup for all projects.                                             | Best with separate setups for each project.            |
+| **Version Control**          | 	Good for keeping all projects in sync.               | Best for keeping projects independent.                    |
+| **Standardization**              | Enforces consistent standards across projects.                      | Teams have more freedom to use their own tools.     |
+| **Access Control**              | Good for wide access to most code.                                           |Better for limiting access to specific projects.      |
+| **Build Efficiency**               | 	Slower as repo grows.                             | Faster builds due to smaller repos.                  |
+| **Management Ease**               | Easier for a single repo, harder as teams grow.           | Easier for managing smaller, simpler repos.  |
 
 
-## Installation 
-Follow the link for the installation Document:
-[ScyllaDB Installation](https://github.com/Snaatak-Skyops/Documentation/blob/ea796dacd3337b197106ee30449661f0299f7d97/OT%20MS%20Understanding/Database/Scylla%20DB/POC/README.md)
+## **Conclusion**
+We’re using a **Micro-Repo** setup to make development smoother. Each team works on its own project, without depending on others. This speeds up development and makes it more efficient. It also helps teams stay flexible and work together better as project needs change. The system is like a set of separate building blocks, making it easier to fix problems and reducing the chance that one issue will affect everything else.
 
 
-## Use Cases 
+## Contact Information 
+| Name         | Email Address                              |
+|:------------:|:------------------------------------------:|
+| Prashant Sharma | prashant.sharma@mygurukulam.co         |
 
-- **Analytics:** It can quickly process and analyze large sets of data, making it useful for businesses or systems that need to extract insights from big data fast.
-- **IoT (Internet of Things):** ScyllaDB is great for managing large amounts of data from connected devices, like sensors or smart devices, in real-time.
-- **Social Media:** It can store and manage large amounts of user-generated content like posts, comments, and likes, with quick retrieval and updates.
-- **Gaming:** ScyllaDB can handle real-time game data, such as player scores, game state, and user interactions, while supporting large numbers of players at once.
-- **Machine Learning:** ScyllaDB helps store and manage large datasets for training machine learning models, allowing for fast reads and writes during model development.
-
-## Conclusion
-In the OT-Microservices system, ScyllaDB is used as the main database for the Employee API. It helps store and retrieve employee data quickly and efficiently, thanks to its high performance, ability to scale easily, and low response times. Since it works well with Cassandra, it's easy to integrate into the system. ScyllaDB's ability to handle failures and keep data available makes it a reliable choice for handling heavy workloads.
-
-## Contacts
-
-| Name| Email Address      |
-|-----|--------------------------|
-| Prashant Sharma | prashant.sharma@mygurukulam.co |
+## References 
+| Name         | References                          |
+|:------------:|:------------------------------------------:|
+| Prashant Sharma | [Mono vs Micro Repo](https://dev.to/mrizwanashiq/monorepo-vs-microrepo-m58)        |
 
 
 
-## References
 
-| Source                                                                                     | Description                                |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------ |
-| [ScyllaDB Installation Guide](https://opensource.docs.scylladb.com/stable/getting-started/install-scylla/install-on-linux.html) | Comprehensive guide for installing ScyllaDB on Linux. |
-| [ScyllaDB Configuration Guide](https://www.scylladb.com/download/?platform=ubuntu-22.04&version=scylla-5.4#open-source) | Step-by-step instructions for configuring ScyllaDB. |
+
+
+
