@@ -1,5 +1,5 @@
 ![LOGO](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSE99tPPOjF3NdHhrPPetiVo0MR-s1Mhm4oeQ&s)
-![LOGO](https://www.thoughtworks.com/content/dam/thoughtworks/images/photography/inline-image/insights/blog/agile-engineering-practices/blg_inline_mono_vs_multi_es.png)
+
 # **Conclusion Documentation of *Monorepo vs Micro Repo***
 
 | **Author** | **Created on**      | **Version** | **Last updated by** | **Internal Reviewer** | **Reviewer L0** | **Reviewer L1** | **Reviewer L2** |
