@@ -19,16 +19,20 @@ In modern software development, managing code repositories effectively is crucia
 A **monorepo**, short for "monolithic repository," is an approach where multiple projects or components are stored within a single repository. In the context of a project with a backend and frontend, the codebases for both the backend and frontend would reside in a single monorepo.
 
 #### Related Resources
-**Please refer to the reference link mentioned below**  
-[Mono repo](https://github.com/Snaatak-Skyops/Documentation/blob/f646c411c9b0cc26b5264ad71897f1aa637d9d0e/VCS%20Design%20%2B%20POC/Mono%20and%20Micro/Mono%20Repository%20Features/Detailed%20Documentation/README.md) - Mono repo Features
-
+**Please refer to the reference link mentioned below**
+| Link         | Description         |
+|--------------|------------------------|
+| [Mono repo](https://github.com/Snaatak-Skyops/Documentation/blob/f646c411c9b0cc26b5264ad71897f1aa637d9d0e/VCS%20Design%20%2B%20POC/Mono%20and%20Micro/Mono%20Repository%20Features/Detailed%20Documentation/README.md) | Mono repo Features| 
 ---
 ## **Micro Repo**
 **Microrepos**, or "microservices repositories," involve maintaining separate repositories for each microservice or component of a project. In the case of a backend and frontend project, there would be a dedicated repository for the backend and another for the frontend.
 
 #### Related Resources
-**Please refer to the reference link mentioned below**  
-[Micro repo](https://github.com/Snaatak-Skyops/Documentation/blob/498ee68a773e819beb952080ad8674658edf9e4f/VCS%20Design%20%2B%20POC/Mono%20and%20Micro/Micro%20Repository%20Features/Detailed%20Documentation/README.md) - Micro repo Features
+**Please refer to the reference link mentioned below**
+| Link         | Description         |
+|--------------|------------------------|
+| [Micro repo](https://github.com/Snaatak-Skyops/Documentation/blob/498ee68a773e819beb952080ad8674658edf9e4f/VCS%20Design%20%2B%20POC/Mono%20and%20Micro/Micro%20Repository%20Features/Detailed%20Documentation/README.md) | Micro repo Features|
+
 
 ## **Comparison: Monorepo vs Micro Repo**
 
