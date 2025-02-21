@@ -1,7 +1,12 @@
 # Salary API Documentation:-
   ![image](https://github.com/user-attachments/assets/d99e5344-36da-47dd-bd82-f564858c8858)
 
+<<<<<<< HEAD
 
+=======
+# ***Introduction***
+In modern software development, managing code repositories effectively is crucial for maintaining productivity and scalability. Two popular approaches for organizing repositories are the **monorepo** and **microrepo** strategies.
+>>>>>>> parent of 617db4b (Update README.md)
 
 | *Author* | *Created on* | *Version* | *Last updated by*|*Internal Reviewer* |*Reviewer L0* |*Reviewer L1* |*Reviewer L2* |
 |------------|---------------------------|-------------|---------------------|-------------|-------------|-------------|-------------|
@@ -94,6 +99,7 @@ ___
 ___
 # Dependencies
 
+<<<<<<< HEAD
 
 
 | **Dependency**     | **Purpose**                                           |
@@ -114,6 +120,10 @@ ___
 
 
 **This architecture represents a caching strategy to optimize data retrieval for a Salary API, using Redis as a cache and ScyllaDB as the primary database. Let’s break it down step by step:**
+=======
+## **Conclusion**
+We’re using a **Micro-Repo** setup to make development smoother. Each team works on its own project, without depending on others. This speeds up development and makes it more efficient. It also helps teams stay flexible and work together better as project needs change. The system is like a set of separate building blocks, making it easier to fix problems and reducing the chance that one issue will affect everything else.
+>>>>>>> parent of 617db4b (Update README.md)
 
 
 ## Architecture Explained
