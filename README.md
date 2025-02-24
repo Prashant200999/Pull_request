@@ -2,9 +2,7 @@
 # Salary API Documentation:-
   ![image](https://github.com/user-attachments/assets/d99e5344-36da-47dd-bd82-f564858c8858)
 
-dsfdsfdsfdsfsdfdsfdsfdsfdsf
 
-=======
 # ***Introduction***
 In modern software development, managing code repositories effectively is crucial for maintaining productivity and scalability. Two popular approaches for organizing repositories are the **monorepo** and **microrepo** strategies.
 >>>>>>> parent of 617db4b (Update README.md)
