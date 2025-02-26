@@ -1,111 +1,134 @@
+# Detailed documentation of Jenkins High Availability 
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Jenkins_logo.svg/1483px-Jenkins_logo.svg.png" height="130px" width="100px"></img>
 
 | **Author** | **Created on** | **Last updated by** | **Last edited on** | **Internal Reviewer** | **Reviewer L0** |**Reviewer L1** |**Reviwer L2** |
 |------------|----------------|----------------------|---------------------|---------------|---------------|---------------|---------------|
 | Prashant Sharma | 25-02-25  |  Prashant Sharma | 25-02-25  | Siddharth Pawar | | | |   
 
-## Table Of Contents
-- [Introduction](#introduction)
-- [Why License Scanning?](#why-license-scanning)
-- [License Scanning Tools](#license-scanning-tools)
-- [Tool Comparison](#tool-comparison)
-- [Tool Recommendation](#tool-recommendation)
-- [Advantages and Disadvantages](#advantages-and-disadvantages)
-- [Best Practices](#best-practices)
-- [Conclusion](#conclusion)
-- [Contact Information](#contact-information)
-- [References](#references)
+
+## Table of Contents
+
+1. [Introduction](#introduction)
+2. [Why Jenkins High Availability?](#why-jenkins-high-availability)
+3. [Architecture](#architecture)
+4. [High Availability Setup Steps](#high-availability-setup-steps)
+    - [Step 1: Setting Up Multiple Jenkins Masters](#step-1-setting-up-multiple-jenkins-masters)
+    - [Step 2: Configuring Jenkins Agents](#step-2-configuring-jenkins-agents)
+    - [Step 3: Shared File System Setup](#step-3-shared-file-system-setup)
+    - [Step 4: Backups and Disaster Recovery](#step-4-backups-and-disaster-recovery)
+    - [Step 5: Testing and Validation](#step-5-testing-and-validation)
+5. [Benefits of Jenkins High Availability](#benefits-of-jenkins-high-availability)
+6. [Conclusion](#conclusion)
+7. [Contact Information](#contact-information)
+8. [References](#references)
 
 ---
 
 ## Introduction
-License scanning in CI is the automated process of identifying and ensuring compliance with the licenses of third-party dependencies in a project.
+
+High Availability (HA) in Jenkins ensures that CI/CD pipelines continue running smoothly, even in the event of hardware or software failures. This is crucial for organizations that depend on Jenkins for continuous integration and delivery, as it helps minimize downtime and maintain productivity.
+
+#### Jenkins can be set up in HA mode using two methods:
+- Active/Passive Configuration
+- HA Setup with an Autoscaling Group 
+
+---
+## Why Jenkins High Availability?
+
+| **Reason**               | **Description**                                                                                 |
+|--------------------------|-------------------------------------------------------------------------------------------------|
+| **Business Continuity**   | Ensure Jenkins services remain uninterrupted.                                                          |
+| **Minimize Downtime**     | Prevent system failures from impacting CI/CD pipelines.        |
+| **Scalability**           | Expand Jenkins capacity by distributing workloads efficiently.                               |
+| **Load Balancing**        | Enhance performance and resilience by distributing traffic across multiple instances. |
 
 ---
 
-## Why License Scanning?
-- **Legal Compliance:** Ensures the project complies with open-source license requirements.
-- **Risk Mitigation:** Prevents using dependencies with incompatible or restrictive licenses.
-- **Security:** Identifies licenses that may have known security vulnerabilities.
-- **Automated Checks:** Streamlines the process of tracking and managing licenses during development.
-- **Avoid Legal Disputes:** Helps avoid potential legal conflicts over license violations.
+## Architecture 
 
----
-## License Scanning Tools
-
-| Tool             | Description                                                                 |
-|-------------------|-----------------------------------------------------------------------------|
-| **FOSSA**         | The tool which helps check and manage licenses and dependencies in the project.             |
-| **Black Duck**     | The solution that focuses on security and making sure open-source licenses are followed.                    |
-| **FOSSology**      | A software system that helps with open-source license compliance.                    |
+| **Component**            | **Description**                                                                                 |
+|--------------------------|-------------------------------------------------------------------------------------------------|
+| **Jenkins Master**        | Manages jobs, configurations, and the overall Jenkins environment. Multiple masters behind a load balancer ensure high availability. |
+| **Jenkins Agents** | Distribute workloads across multiple machines in HA setups. |
+| **Shared Storage**        | Stores configurations, jobs, logs, and artifacts in a shared file system accessible by all nodes. |
+| **Database Replication**  | Ensures job histories, configurations, and logs are stored in a replicated database to prevent data loss. |
+| **Load Balancer**         | Distributes incoming traffic across Jenkins masters and redirects it to a healthy master if a failure occurs.|
 
 
-
----
-
-
-## Tool Comparison
-
-| Aspects          | FOSSA                                             | Black Duck                                          | FOSSology                                          |
-|---------------------------|---------------------------------------------------|----------------------------------------------------|---------------------------------------------------|
-| **License Detection**     | Comprehensive detection across multiple languages.     | Extensive detection across various languages and managers.    | Focuses mainly on source code analysis.             |
-| **Vulnerability Scanning**| Scans for open-source dependency vulnerabilities.          | Identifies vulnerabilities in open-source components.    | Primarily focused on license analysis, lacks security scanning.|
-| **Integration**           | Supports CI/CD tools and various workflows.      | Integrates with popular DevOps tools.      | Supports custom integrations via APIs.      |
-| **Community Support**     | Active community with regular updates.    | Strong support from Synopsys.           | Open-source with community-driven contributions.   |
-| **Customization**         | Flexible reporting and policy customization.       | Customizable policies and reporting.     | Requires more technical expertise for customization. |
-| **Cost (Free Versions)**  | Free version with limited features                | Primarily commercial with trial options           | Open-source, but support may incur costs.    |
+![Jenkins Master-Slave](https://miro.medium.com/v2/resize:fit:1052/0*Z7gftcD-L0M5rB95)
 
 
+## High Availability Setup Steps
 
----
+## Step 1: Setting Up Multiple Jenkins Masters
+
+1. **Install Jenkins on Multiple Machines**
+ - Install Jenkins on at least two separate machines or virtual instances. These will be your Jenkins masters.
+
+2. **Configure Jenkins Masters**
+ - Ensure that both Jenkins masters have identical configurations (same jobs, plugins, etc.).
+
+3. **Database Configuration**
+ - Configure the Jenkins masters to point to the same shared database for storing job configurations, user data, and job history.
+
+4. **Configure Load Balancer**
+ - Set up a load balancer (e.g., HAProxy or Nginx) to distribute traffic between the Jenkins masters.
+
+
+## Step 2: Configuring Jenkins Agents
+
+1. **Set Up Jenkins Agents**
+ - Install Jenkins agents (slaves) on multiple machines or containers. These agents will be used to execute Jenkins jobs.
+
+2. **Connect Agents to Masters**
+ - Ensure the Jenkins agents are connected to all Jenkins masters to allow job execution from any master.
+ - Use the "Node Management" section in the Jenkins UI to add agents.
+
+3. **Distribute Job Load**
+ - Use the load balancer to distribute job requests evenly across available Jenkins agents.
+
+## Step 3: Shared File System Setup
+
+1. **Install NFS/Cloud Storage**
+ - Set up a shared file system using NFS or cloud storage (e.g., AWS EFS, Google Cloud Storage).
+  
+2. **Mount Shared Storage**
+ - Mount the shared storage on all Jenkins masters and agents to ensure they can access the same data.
    
+## Step 4: Backups and Disaster Recovery
 
+1. **Backup Jenkins Configurations and Data**
+ - Install and configure the ThinBackup plugin to automate the backup of Jenkins data, including configurations, jobs, and artifacts.
+  
+2. **Ensure Consistency**
+ - Schedule regular backups of both the shared file system and Jenkins database to ensure consistency.
 
-## Tool Recommendation
-- **FOSSA** is recommended as :
+## Step 5: Testing and Validation
 
-| Feature                        | Description                                                                     |
-|--------------------------------|---------------------------------------------------------------------------------|
-| **Multi-language Support**     | 	Extensive license detection across various programming languages.     |
-| **Continuous Monitoring**      | Monitors license changes over time to ensure ongoing compliance.   |
-| **Vulnerability Scanning**     |Strong scanning capabilities to detect potential security risks.        |
-| **User-Friendly Interface**    | Intuitive navigation and smooth integration with CI/CD pipelines.   |
+1. **Failover Testing**
+ - Perform regular failover testing by manually stopping one Jenkins master to confirm that the load balancer properly redirects traffic to the backup master.
 
+2. **Job Execution Validation**
+ - Ensure that Jenkins jobs continue to run on agents even if one Jenkins master goes down.
+  
+3. **Monitor System Health**
+ - Set up monitoring for Jenkins masters, agents, and the load balancer to track system health and performance.
 
-## Advantages and Disadvantages
+## Benefits of Jenkins High Availability
 
-| **Advantages**                                      | **Disadvantages**                                   |
-|-----------------------------------------------------|----------------------------------------------------|
-|  Guarantees legal compliance               |  Potential for incorrect license identification     |
-| Identifies various license types           | Excessive alerts can create overhead           |
-| Supports an open-source strategy              | Limited coverage in some areas             |
-|  Automates the scanning process               | Requires regular tool updates                      |
-| Enables informed decision-making                     | Doesn’t cover all compliance concerns          |
-|  Minimizes legal risks                         | Challenges in interpreting licenses               |
-
-
-
-
----
-
-## Best Practices
-
-| **Best Practice**           | **Description**                                                                       |
-|-----------------------------|---------------------------------------------------------------------------------------|
-| **Regular Scanning**             | Set up automated scans for your codebase to catch license issues early.                 |
-| **Integrate with CI/CD Pipeline**        | Integrate FOSSA into your CI/CD workflow for continuous license compliance checks.                 |
-| **Monitor Dependency Updates**     | Regularly track updates to your dependencies and re-scan to ensure compliance.                |
-| **Set Up Alerts**      | Configure alerts to notify you of critical license or security issues.      |
-| **Review and Document Licenses**          | Ensure your project documentation includes details on license compliance.         |
-| **Perform Regular Audits** | Conduct periodic audits to verify and confirm ongoing compliance.                |
-
----
+| **Benefit**                    | **Description**                                                         |
+|---------------------------------|-------------------------------------------------------------------------|
+| **Reduced Downtime**          | Minimizes service interruptions during failures by quickly rerouting traffic.|
+| **Optimized Load**           | Distributes the load evenly across multiple Jenkins instances, enhancing performance.|
+| **Scalability**                 | Allows for easy expansion of Jenkins to accommodate increasing demands with additional masters and agents. |
+| **High Availability**                  | Maintains continuous operation through redundant Jenkins instances and agents. |
+| **Continuous Operations**         | Guarantees uninterrupted CI/CD pipelines, even in the event of system failures.|
 
 ## Conclusion
-License scanning ensures legal compliance and reduces risks by automatically checking dependencies for license issues. Automation streamlines the process, allowing teams to focus on development while maintaining compliance and security.
 
----
+Configuring Jenkins for high availability is crucial to maintaining the continuous operation and efficiency of your CI/CD pipelines, even in the event of system failures. By utilizing multiple Jenkins masters, distributed agents, shared storage, and load balancing, you can create a robust and scalable Jenkins environment. Implementing these best practices along with a disaster recovery plan will minimize downtime and ensure your software delivery pipeline remains uninterrupted and reliable.
 
-## Contacts
+## Contact Information
 
 | Name| Email Address      |
 |-----|--------------------------|
@@ -113,12 +136,13 @@ License scanning ensures legal compliance and reduces risks by automatically che
 
 
 
----
+
 
 ## References
 
-| Tool        | Link                                                                   |
-|-------------|------------------------------------------------------------------------|
-| FOSSA       | [Official Document](https://docs.fossa.com/docs/introduction)                                 |
-| POC        | [Link](https:/n/blob/main)      |
-| Comparison with multiple tools| [Click Here](https://www.omgwiki.org/dido/doku.php?id=dido:public:ra:xapend:xapend.e_tools:license-scan)      |
+| **Link**                                          | **Description**                                                         |
+|---------------------------------------------------|-------------------------------------------------------------------------|
+| [Jenkins High Availability Documentation](https://www.jenkins.io/doc/book/high-availability/) | Official Jenkins guide for setting up HA environments.                  |
+| [HAProxy](https://www.haproxy.org/)                | Open-source load balancer used for distributing traffic in Jenkins HA.  |
+| [ThinBackup Plugin](https://plugins.jenkins.io/thinbackup/) | Plugin for automating Jenkins backups.                                 |
+| [AWS EFS](https://aws.amazon.com/efs/)             | Amazon Elastic File System for Jenkins shared storage.                  |
