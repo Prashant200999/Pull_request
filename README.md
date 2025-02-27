@@ -3,7 +3,7 @@
 
 | **Author** | **Created on** | **Last updated by** | **Last edited on** | **Internal Reviewer** | **Reviewer L0** |**Reviewer L1** |**Reviwer L2** |
 |------------|----------------|----------------------|---------------------|---------------|---------------|---------------|---------------|
-| Prashant Sharma | 25-02-25  |  Prashant Sharma | 25-02-25  | Siddharth Pawar | | | |   
+| Prashant Sharma | 27-02-25  |  Prashant Sharma | 27-02-25  | Siddharth Pawar | | | |   
 
 
 ## Table of Contents
@@ -142,7 +142,5 @@ Configuring Jenkins for high availability is crucial to maintaining the continuo
 
 | **Link**                                          | **Description**                                                         |
 |---------------------------------------------------|-------------------------------------------------------------------------|
-| [Jenkins High Availability Documentation](https://www.jenkins.io/doc/book/high-availability/) | Official Jenkins guide for setting up HA environments.                  |
-| [HAProxy](https://www.haproxy.org/)                | Open-source load balancer used for distributing traffic in Jenkins HA.  |
-| [ThinBackup Plugin](https://plugins.jenkins.io/thinbackup/) | Plugin for automating Jenkins backups.                                 |
-| [AWS EFS](https://aws.amazon.com/efs/)             | Amazon Elastic File System for Jenkins shared storage.                  |
+| [Jenkins High Availability Documentation](https://medium.com/@priyanshigola8/setup-jenkins-ha-high-availability-with-master-slave-architecture-9b95f8b341e4) | Jenkins guide for setting up HA environment.  |
+| [ThinBackup Plugin]([https://plugins.jenkins.io/thinbackup/](https://medium.com/devops-technical-notes-and-manuals/jenkins-backup-and-restore-using-plugins-guide-for-junior-devops-engineers-ffd0fd41fb8e)) | Plugin for automating Jenkins backups. |
