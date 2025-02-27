@@ -1,4 +1,4 @@
-# Detailed documentation of Jenkins High Availability 
+# Documentation of Jenkins High Availability 
 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Jenkins_logo.svg/1483px-Jenkins_logo.svg.png" height="130px" width="100px"></img>
 
 | **Author** | **Created on** | **Last updated by** | **Last edited on** | **Internal Reviewer** | **Reviewer L0** |**Reviewer L1** |**Reviwer L2** |
