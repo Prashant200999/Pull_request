@@ -57,62 +57,33 @@ High Availability (HA) in Jenkins ensures that CI/CD pipelines continue running 
 
 ![Jenkins Master-Slave](https://miro.medium.com/v2/resize:fit:1052/0*Z7gftcD-L0M5rB95)
 
+#######################
+Step 1: Setting Up Multiple Jenkins Masters → Install Jenkins on Multiple Machines → Install Jenkins on at least two separate machines or virtual instances to serve as Jenkins masters.
+
+
+
+
+##########################
 
 ## High Availability Setup Steps
+| **Step**                                | **Action**                                             | **Description**                                                                                             |
+|-----------------------------------------|--------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| **Step 1: Setting Up Multiple Jenkins Masters** | **Install Jenkins on Multiple Machines**               | Install Jenkins on at least two separate machines or virtual instances to serve as Jenkins masters.           |
+|                                         | **Configure Jenkins Masters**                          | Ensure both Jenkins masters have identical configurations (jobs, plugins, settings, etc.).                   |
+|                                         | **Database Configuration**                             | Configure the Jenkins masters to point to a shared database for storing job configurations, user data, and job history. |
+|                                         | **Configure Load Balancer**                            | Set up a load balancer (e.g., HAProxy or Nginx) to distribute traffic between Jenkins masters.               |
+| **Step 2: Configuring Jenkins Agents**  | **Set Up Jenkins Agents**                              | Install Jenkins agents (slaves) on multiple machines or containers to execute jobs.                          |
+|                                         | **Connect Agents to Masters**                          | Ensure Jenkins agents are connected to all Jenkins masters through the Node Management section in Jenkins UI. |
+|                                         | **Distribute Job Load**                                | Use the load balancer to evenly distribute job requests across available Jenkins agents.                     |
+| **Step 3: Shared File System Setup**    | **Install NFS/Cloud Storage**                          | Set up a shared file system using NFS or cloud storage (e.g., AWS EFS, Google Cloud Storage).                |
+|                                         | **Mount Shared Storage**                               | Mount the shared storage on all Jenkins masters and agents to ensure they can access the same data.          |
+| **Step 4: Backups and Disaster Recovery**| **Backup Jenkins Configurations and Data**             | Install and configure the ThinBackup plugin to automate backup of Jenkins data (configs, jobs, artifacts).   |
+|                                         | **Ensure Consistency**                                 | Schedule regular backups of the shared file system and Jenkins database to ensure data consistency.          |
+| **Step 5: Testing and Validation**      | **Failover Testing**                                   | Perform regular failover testing by stopping one Jenkins master to ensure the load balancer redirects traffic properly. |
+|                                         | **Job Execution Validation**                           | Verify that Jenkins jobs continue executing on agents even if one Jenkins master goes down.                  |
+|                                         | **Monitor System Health**                              | Set up monitoring for Jenkins masters, agents, and load balancers to track system health and performance.     |
 
-## Step 1: Setting Up Multiple Jenkins Masters
-
-1. **Install Jenkins on Multiple Machines**
- - Install Jenkins on at least two separate machines or virtual instances. These will be your Jenkins masters.
-
-2. **Configure Jenkins Masters**
- - Ensure that both Jenkins masters have identical configurations (same jobs, plugins, etc.).
-
-3. **Database Configuration**
- - Configure the Jenkins masters to point to the same shared database for storing job configurations, user data, and job history.
-
-4. **Configure Load Balancer**
- - Set up a load balancer (e.g., HAProxy or Nginx) to distribute traffic between the Jenkins masters.
-
-
-## Step 2: Configuring Jenkins Agents
-
-1. **Set Up Jenkins Agents**
- - Install Jenkins agents (slaves) on multiple machines or containers. These agents will be used to execute Jenkins jobs.
-
-2. **Connect Agents to Masters**
- - Ensure the Jenkins agents are connected to all Jenkins masters to allow job execution from any master.
- - Use the "Node Management" section in the Jenkins UI to add agents.
-
-3. **Distribute Job Load**
- - Use the load balancer to distribute job requests evenly across available Jenkins agents.
-
-## Step 3: Shared File System Setup
-
-1. **Install NFS/Cloud Storage**
- - Set up a shared file system using NFS or cloud storage (e.g., AWS EFS, Google Cloud Storage).
-  
-2. **Mount Shared Storage**
- - Mount the shared storage on all Jenkins masters and agents to ensure they can access the same data.
-   
-## Step 4: Backups and Disaster Recovery
-
-1. **Backup Jenkins Configurations and Data**
- - Install and configure the ThinBackup plugin to automate the backup of Jenkins data, including configurations, jobs, and artifacts.
-  
-2. **Ensure Consistency**
- - Schedule regular backups of both the shared file system and Jenkins database to ensure consistency.
-
-## Step 5: Testing and Validation
-
-1. **Failover Testing**
- - Perform regular failover testing by manually stopping one Jenkins master to confirm that the load balancer properly redirects traffic to the backup master.
-
-2. **Job Execution Validation**
- - Ensure that Jenkins jobs continue to run on agents even if one Jenkins master goes down.
-  
-3. **Monitor System Health**
- - Set up monitoring for Jenkins masters, agents, and the load balancer to track system health and performance.
+---
 
 ## Benefits of Jenkins High Availability
 
