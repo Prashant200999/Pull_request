@@ -1,9 +1,16 @@
 
 def call() {
 def emailRecipient = "prashant.sharma@mygurukulam.co"
-            stage('Checkout Code') {
-                git branch: "main", credentialsId: Prashant_git, url: "https://github.com/Snaatak-Skyops/employee-api.git"
-            }
+            stage('Clean Workspace') {
+            cleanWs()  
+        }
+
+        // Stage: Clone Repository
+        stage('Clone Repository') {
+            git url: 'https://github.com/OT-MICROSERVICES/employee-api.git', 
+                branch: 'main', 
+                credentialsId: 'Prashant_git'  
+        }
 
             stage('Set Environment') {
                 sh 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s latest'
