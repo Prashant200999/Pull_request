@@ -62,11 +62,11 @@ def sendNotification() {
     }
 }
 
-// Main method calling all functions
-def call() {
-    cleanWorkspace()
-    cloneRepository()
-    setEnvironment()
-    runGolangciLint()
-    sendNotification()
-}
+// // Main method calling all functions
+// def call() {
+//     cleanWorkspace()
+//     cloneRepository()
+//     setEnvironment()
+//     runGolangciLint()
+//     sendNotification()
+// }
