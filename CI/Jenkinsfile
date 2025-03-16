@@ -9,8 +9,8 @@ pipeline {
         stage('Execute Pipeline Steps') {
             steps {
                 script{
-                    test.cleanWorkspace()
-                    test.cloneRepository()
+                    testScript.cleanWorkspace()
+                    testScript.cloneRepository()
                 }
             }
         }
