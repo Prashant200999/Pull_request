@@ -19,7 +19,7 @@ def call() {
         stage('Compile') {
             sh "mvn clean compile"  
         }
-        stage(send notification){
+        stage('send notification'){
             echo "Sending success notifications..."
     
             emailext body: """Hello,
