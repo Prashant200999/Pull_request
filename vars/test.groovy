@@ -7,7 +7,7 @@ def call() {
 
         // Stage: Clone Repository
         stage('Clone Repository') {
-            git url: 'https://github.com/OT-MICROSERVICES/employee-api.git', 
+            git url: 'https://github.com/OT-MICROSERVICES/salary-api.git', 
                 branch: 'main', 
                 credentialsId: 'Prashant_git'  
         }
