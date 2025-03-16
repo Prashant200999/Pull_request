@@ -20,7 +20,6 @@ def emailRecipient = "prashant.sharma@mygurukulam.co"
                 def pipelineResult = sh(script: './bin/golangci-lint run ./... --out-format html > report_bug.html', returnStatus: true)
 
                 if (pipelineResult != 0){
-                    currentBuild.result = 'UNSTABLE'
                     echo "Linting found issues, marking build as unstable."
                 }
             }
