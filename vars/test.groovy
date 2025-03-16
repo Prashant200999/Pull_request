@@ -34,4 +34,4 @@ def emailRecipient = "prashant.sharma@mygurukulam.co"
             )
         }
     }
-}
+
