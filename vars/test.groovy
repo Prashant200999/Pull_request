@@ -18,7 +18,7 @@ def emailRecipient = "prashant.sharma@mygurukulam.co"
                 }
             }
 
-        } stage('Send Notification') {
+         stage('Send Notification') {
             echo "Sending success notifications..."
 
 
