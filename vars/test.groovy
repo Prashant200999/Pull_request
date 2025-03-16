@@ -18,8 +18,8 @@ def emailRecipient = "prashant.sharma@mygurukulam.co"
                 }
             }
 
-        } finally {
-            echo 'Sending final email notification...'
+        } stage('Send Notification') {
+            echo "Sending success notifications..."
 
 
             emailext(
