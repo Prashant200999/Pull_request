@@ -1,6 +1,6 @@
 @Library('sharedlibrary@main') _  // Load the shared library
  environment { 
-     testScript = load 'CI/vars/test.groovy
+     testScript = load 'CI/vars/test.groovy'
             }
 pipeline {
     agent any
