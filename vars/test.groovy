@@ -19,22 +19,25 @@ def call() {
         stage('Compile') {
             sh "mvn clean compile"  
         }
-        stage('send notification'){
+           stage('Send Notification') {
             echo "Sending success notifications..."
-    
-            emailext body: """Hello,
+            
+            emailext(
+                subject: "Build Success: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
+                body: """Hello,
 
-                The Jenkins pipeline ${env.JOB_NAME} has completed successfully on Build #${env.BUILD_NUMBER}.
+                    The Jenkins pipeline ${env.JOB_NAME} has completed successfully on Build #${env.BUILD_NUMBER}.
 
-                Build Details:
-                - Job Name: ${env.JOB_NAME}  
-                - Build Number: ${env.BUILD_NUMBER}  
-                - Build URL: ${env.BUILD_URL}  
+                    Build Details:
+                    - Job Name: ${env.JOB_NAME}
+                    - Build Number: ${env.BUILD_NUMBER}
+                    - Build URL: ${env.BUILD_URL}
 
-                Best regards,  
-                Jenkins CI
+                    Best regards,
+                    Jenkins CI
                 """,
-            to:mailrecepient
+                to: mailrecepient
+            )
         }
     }
 }
