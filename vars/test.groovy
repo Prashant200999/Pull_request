@@ -30,16 +30,16 @@ def emailRecipient = "prashant.sharma@mygurukulam.co"
 
             emailext(
                 subject: "Bug analysis report - ${currentBuild.fullDisplayName}",
-                body: """Hello,
+                body: """Hello,<br>
 
-                    The Jenkins pipeline ${env.JOB_NAME} has completed successfully on Build #${env.BUILD_NUMBER}.
+                    The Jenkins pipeline ${env.JOB_NAME} has completed successfully on Build #${env.BUILD_NUMBER}.<br>
 
-                    Build Details:
-                    - Job Name: ${env.JOB_NAME}
-                    - Build Number: ${env.BUILD_NUMBER}
-                    - Build URL: ${env.BUILD_URL}
+                    Build Details:<br>
+                    - Job Name: ${env.JOB_NAME}<br>
+                    - Build Number: ${env.BUILD_NUMBER}<br>
+                    - Build URL: ${env.BUILD_URL}<br>
 
-                    Best regards,
+                    Best regards,<br>
                     Jenkins CI
                 """,
                 mimeType: 'text/html',
