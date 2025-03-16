@@ -1,7 +1,6 @@
 def call() {
-    environment{
-        mailrecepient = "prashant.sharma@mygurukulam.co"
-    }
+       def mailrecepient = "prashant.sharma@mygurukulam.co"
+    
     script {
         // Stage: Clean Workspace
         stage('Clean Workspace') {
