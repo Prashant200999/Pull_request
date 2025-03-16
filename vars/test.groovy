@@ -1,41 +1,36 @@
+
 def call() {
-       def mailrecepient = "prashant.sharma@mygurukulam.co"
-    
-    script {
-        // Stage: Clean Workspace
-        stage('Clean Workspace') {
-            cleanWs()  
-        }
+def emailRecipient = "prashant.sharma@mygurukulam.co"
+            stage('Checkout Code') {
+                git branch: "main", credentialsId: Prashant_git, url: "https://github.com/Snaatak-Skyops/employee-api.git"
+            }
 
-        // Stage: Clone Repository
-        stage('Clone Repository') {
-            git url: 'https://github.com/OT-MICROSERVICES/salary-api.git', 
-                branch: 'main', 
-                credentialsId: 'Prashant_git'  
-        }
+            stage('Set Environment') {
+                sh 'curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s latest'
+            }
 
-        // Stage: Compile Code
-        stage('Compile') {
-            sh "mvn clean compile"  
-        }
-           stage('Send Notification') {
-            echo "Sending success notifications..."
-            
+            stage('Run golangci-lint') {
+                def pipelineResult = sh(script: './bin/golangci-lint run ./... --out-format html > report_bug.html', returnStatus: true)
+
+                if (pipelineResult != 0){
+                    currentBuild.result = 'UNSTABLE'
+                    echo "Linting found issues, marking build as unstable."
+                }
+            }
+
+        } finally {
+            echo 'Sending final email notification...'
+
+
             emailext(
-                subject: "Build Success: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-                body: """Hello,
-
-                    The Jenkins pipeline ${env.JOB_NAME} has completed successfully on Build #${env.BUILD_NUMBER}.
-
-                    Build Details:
-                    - Job Name: ${env.JOB_NAME}
-                    - Build Number: ${env.BUILD_NUMBER}
-                    - Build URL: ${env.BUILD_URL}
-
-                    Best regards,
-                    Jenkins CI
-                """,
-                to: mailrecepient
+                subject: "Jenkins Build Report - ${currentBuild.fullDisplayName}",
+                body: """<p>Hi Team,</p>
+                         <p>The Jenkins build <b>${currentBuild.fullDisplayName}</b> has completed with status: <b>${currentBuild.result}</b>.</p>
+                         <p>Please find the bug report attached below.</p>
+                         <p>Regards,<br>Jenkins</p>""",
+                mimeType: 'text/html',
+                to: emailRecipient,
+                attachmentsPattern: 'report_bug.html'  
             )
         }
     }
