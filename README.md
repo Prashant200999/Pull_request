@@ -1,4 +1,4 @@
-# Under-utilized EIP Tagging with Table Update and Slack Notification
+# Fetching Under-utilized EIP 
 
 This repository contains an automated OpenOps workflow that identifies under-utilized (unassociated) Elastic IPs (EIPs) in your AWS environment. The workflow tags these EIPs for deletion, logs the details in an internal table, and sends a notification via Slack to alert your team.
 
@@ -49,7 +49,7 @@ This workflow is designed to help reduce AWS costs by automating the detection a
 | Component          | Description                                                    |
 |--------------------|----------------------------------------------------------------|
 | **Slack Channel**  | `C08LZL63FB9` – Used to send notifications.                    |
-| **AWS Connection** | Connection named `aws-prashant`, which manages AWS CLI credentials. |
+| **AWS Connection** | Connection named `<aws-account>`, which manages AWS CLI credentials. |
 | **OpenOps Table**  | The workflow uses `@openops/block-openops-tables` to log EIP details. |
 
 ---
@@ -59,7 +59,7 @@ This workflow is designed to help reduce AWS costs by automating the detection a
 ### AWS Authentication
 
 The workflow supports two methods:
-- **AWS Access Keys**: Configured within the `aws-prashant` connection.
+- **AWS Access Keys**: Configured within the `<aws-account>` connection.
 - **IAM Role-based Authentication**: Preferred for enhanced security.
 
 ---
@@ -168,7 +168,7 @@ Region :- "us-east-2"
           "blockName": "@openops/block-aws",
           "actionName": "aws_cli",
           "input": {
-            "auth": "{{connections['aws-prashant']}}",
+            "auth": "{{connections['<aws-account>']}}",
             "commandToRun": "aws sts get-caller-identity --query \"Account\" --output text"
           }
         },
@@ -281,7 +281,7 @@ Region :- "us-east-2"
 
 ## Usage
 
-1. **Update the AWS Connection**: Ensure that your OpenOps AWS connection (`aws-prashant`) is correctly set with valid credentials or IAM Role.
+1. **Update the AWS Connection**: Ensure that your OpenOps AWS connection (`<aws-account>`) is correctly set with valid credentials or IAM Role.
 2. **Configure IAM Role**: Apply the Trust and Permissions policies provided.
 3. **Deploy Workflow**: Import the exported JSON into your OpenOps environment.
 4. **Monitor Results**:
