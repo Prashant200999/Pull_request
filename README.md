@@ -1,170 +1,295 @@
-# POC of Application Monitoring
+# Under-utilized EIP Tagging with Table Update and Slack Notification
 
-
-<img src="https://github.com/user-attachments/assets/e0495a0e-f0f7-4179-8a7f-c6e5031b1be3" width="700" /> <br>
-
-
-| **Author** | **Created on** | **Version** | **Last updated by**|**Last Edited On**|**Level** |**Reviewer** |
-|------------|---------------------------|-------------|----------------|-----|-------------|-------------| 
-| Prashant Sharma |   13-04-2025      | v1          | Prashant Sharma   |13-04-2025  |  Internal Reviewer | Siddharth Pawar |
-
+This repository contains an automated OpenOps workflow that identifies under-utilized (unassociated) Elastic IPs (EIPs) in your AWS environment. The workflow tags these EIPs for deletion, logs the details in an internal table, and sends a notification via Slack to alert your team.
 
 ---
 
 ## Table of Contents
-- [Prerequisites](#prerequisites)
-- [Update Redis Configuration](#step-2-update-redis-configuration)
-- [Setup Prometheus](#step-3-setup-prometheus)
-- [Setup Grafana](#step-4-setup-grafana)
-- [Setup Redis Exporter](#step-5-setup-redis-exporter)
-- [Configuring Redis Exporter Service](#step-6--configuring-redis-exporter-service)
-- [Setting up Grafana Dashboards for Redis Metrics](#step-8-setting-up-grafana-dashboards-for-redis-metrics)
-- [Best practices](#best-practices)
+
+- [Overview](#overview)
+- [Workflow Details](#workflow-details)
+- [Dependencies](#dependencies)
+- [Configuration](#configuration)
+  - [AWS Authentication](#aws-authentication)
+  - [IAM Role Definition](#iam-role-definition)
+- [Expected Output](#expected-output)
+  - [OpenOps Table Sample](#openops-table-sample)
+  - [Slack Notification Sample](#slack-notification-sample)
+- [Exported Workflow JSON](#exported-workflow-json)
+- [Usage](#usage)
 - [Conclusion](#conclusion)
-- [Contact Information](#contact-information)
-- [Reference Links](#reference-links)
 
-## Introduction
+---
 
-This document explains how to monitor Redis using Prometheus and Grafana. It highlights the importance of monitoring Redis for performance, health, and resource usage. Prometheus collects data from Redis, while Grafana visualizes this data, allowing for the creation of custom dashboards. This setup provides real-time insights, helping you detect issues early, optimize performance, and maintain a healthy Redis environment.
+## Overview
 
-## Prerequisites
-|                                                 |
-|-------------------------------------------------|
-| AWS Account with Ubuntu 22.04 LTS EC2 Instance. |
-| Basic knowledge of AWS services, Prometheus, and Grafana. |
+This workflow is designed to help reduce AWS costs by automating the detection and management of unused EIPs. It periodically:
+- Retrieves the AWS account ID.
+- Lists unassociated (unused) EIPs.
+- Tags each found EIP with `Action=MARK_FOR_DELETION`.
+- Logs the details of these EIPs into an internal OpenOps table.
+- Sends a Slack notification with details for review.
 
-## Getting Started
+---
 
-![image](https://github.com/user-attachments/assets/f0c2dc92-ab5e-43ac-bf3c-f9a5b98709f6)
+## Workflow Details
 
+- **Schedule**: Runs daily at 06:00 UTC.
+- **Main Actions**:
+  - Retrieve AWS Account ID using the AWS CLI.
+  - Use `describe-addresses` to list unassociated EIPs.
+  - Tag each unassociated EIP.
+  - Update a record in the OpenOps table with the EIP details.
+  - Notify the team via Slack with a summary message and a link to view the table.
 
-###  Step 3. **Setup Prometheus**
- - To install Prometheus on your system, please follow the link below for the Prometheus Setup Guide. :-[ Prometheus Setup  Guide](https://github.com/snaatak-Zero-Downtime-Crew/Documentation/blob/Nikita-SCRUM-104/Common/Software/Prometheus/README.md)
+---
 
-   
-- **Access Prometheus in the browser**
-``` bash
-<server-public-ip>:9090
+## Dependencies
+
+| Component          | Description                                                    |
+|--------------------|----------------------------------------------------------------|
+| **Slack Channel**  | `C08LZL63FB9` – Used to send notifications.                    |
+| **AWS Connection** | Connection named `aws-prashant`, which manages AWS CLI credentials. |
+| **OpenOps Table**  | The workflow uses `@openops/block-openops-tables` to log EIP details. |
+
+---
+
+## Configuration
+
+### AWS Authentication
+
+The workflow supports two methods:
+- **AWS Access Keys**: Configured within the `aws-prashant` connection.
+- **IAM Role-based Authentication**: Preferred for enhanced security.
+
+---
+
+### IAM Role Definition
+
+**Role Name**: `UnderutilizedEIPCleanupRole`
+
+#### Trust Policy
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
 ```
-![Screenshot 2025-04-08 161204](https://github.com/user-attachments/assets/6251666e-1d35-4cd9-9494-41170600ce6e)
 
+#### Permissions Policy
 
-
-###  Step 4. **Setup Grafana**
- - To Setup Grafana on your system, please follow the link below for the Grafana Setup Guide. :-[ Grafana Setup  Guide](https://github.com/snaatak-Zero-Downtime-Crew/Documentation/blob/Nikita-SCRUM-104/Common/Software/Grafana/README.md)
-
-   
-- **Access in browser**
-``` bash
-<instance_ip>:3000
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListElasticIPs",
+      "Effect": "Allow",
+      "Action": "ec2:DescribeAddresses",
+      "Resource": "*"
+    },
+    {
+      "Sid": "TagUnusedElasticIPs",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "ec2:ResourceTag/Usage": "Unused"
+        }
+      }
+    }
+  ]
+}
 ```
 
-![Screenshot 2025-04-08 161153](https://github.com/user-attachments/assets/847b6c82-840e-4b4f-bece-59d73de8de64)
+---
 
+## Expected Output
 
+### OpenOps Table Sample
 
-## Step 7. Configuring Metrics of Applications in Prometheus Configuration
+| Allocation ID  | Public IP    | Region     | AWS Account ID | Marked For Deletion |
+|----------------|--------------|------------|----------------|----------------------|
+| eipalloc-0abc  | 13.58.123.1  | us-east-2  | 123456789012   | True                |
 
-- Lets update our configuration file using below command:
+---
 
-``` bash
-sudo nano /etc/prometheus/prometheus.yml
-
-```
-```
-  - job_name: "employee-app"
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: ["13.60.97.49:8080"]
+### Slack Notification Sample
 
 ```
+[Update] Under-Utilized EIPs Fetched
 
-- Save the file and restart the Prometheus service:
+The under-utilized EIPs have been successfully retrieved for the following:
+AWS Account ID :- "123456789012"
+Public IP :- "13.58.123.1"
+Region :- "us-east-2"
+<http://192.168.10.160/tables|Click here to view details>.
 ```
-sudo systemctl restart prometheus.service
+
+---
+
+## Exported Workflow JSON
+
+<details>
+<summary>Click to expand the full OpenOps workflow JSON</summary>
+
+
+```json
+{
+  "created": "1746447589671",
+  "updated": "1746447589671",
+  "name": "Under-utilized EIP tagging with addition in table",
+  "template": {
+    "displayName": "Under-utilized EIP tagging with addition in table",
+    "trigger": {
+      "type": "TRIGGER",
+      "settings": {
+        "blockName": "@openops/block-schedule",
+        "blockVersion": "~0.1.5",
+        "input": {
+          "timezone": "UTC",
+          "hour_of_the_day": 6,
+          "run_on_weekends": true
+        }
+      },
+      "nextAction": {
+        "type": "BLOCK",
+        "settings": {
+          "blockName": "@openops/block-aws",
+          "actionName": "aws_cli",
+          "input": {
+            "auth": "{{connections['aws-prashant']}}",
+            "commandToRun": "aws sts get-caller-identity --query \"Account\" --output text"
+          }
+        },
+        "nextAction": {
+          "type": "BLOCK",
+          "settings": {
+            "blockName": "@openops/block-aws",
+            "actionName": "aws_cli",
+            "input": {
+              "commandToRun": "aws ec2 describe-addresses --query \"Addresses[?AssociationId==null]\""
+            }
+          },
+          "nextAction": {
+            "type": "BRANCH",
+            "settings": {
+              "conditions": [
+                [
+                  {
+                    "operator": "BOOLEAN_IS_TRUE",
+                    "firstValue": "{{step_2}}"
+                  }
+                ]
+              ]
+            },
+            "onSuccessAction": {
+              "type": "LOOP_ON_ITEMS",
+              "settings": {
+                "items": "{{step_2}}"
+              },
+              "firstLoopAction": {
+                "type": "BLOCK",
+                "settings": {
+                  "blockName": "@openops/block-aws",
+                  "actionName": "aws_cli",
+                  "input": {
+                    "commandToRun": "aws ec2 create-tags --resources {{step_3['item']['AllocationId']}} --tags Key=Action,Value=MARK_FOR_DELETION"
+                  }
+                },
+                "nextAction": {
+                  "type": "BLOCK",
+                  "settings": {
+                    "blockName": "@openops/block-openops-tables",
+                    "actionName": "update_record",
+                    "input": {
+                      "tableName": "Under-utilized EIPs",
+                      "rowPrimaryKey": {
+                        "rowPrimaryKey": "{{step_3['item']['AllocationId']}}"
+                      },
+                      "fieldsProperties": {
+                        "fieldsProperties": [
+                          {
+                            "fieldName": "PublicIp",
+                            "newFieldValue": {
+                              "newFieldValue": "{{step_3['item']['PublicIp']}}"
+                            }
+                          },
+                          {
+                            "fieldName": "Region",
+                            "newFieldValue": {
+                              "newFieldValue": "{{step_3['item']['NetworkBorderGroup']}}"
+                            }
+                          },
+                          {
+                            "fieldName": "AWS Account ID",
+                            "newFieldValue": {
+                              "newFieldValue": "{{step_6}}"
+                            }
+                          },
+                          {
+                            "fieldName": "Marked For Deletion",
+                            "newFieldValue": {
+                              "newFieldValue": true
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "nextAction": {
+                    "type": "BLOCK",
+                    "settings": {
+                      "blockName": "@openops/block-slack",
+                      "actionName": "send_slack_message",
+                      "input": {
+                        "auth": "{{connections['slack-Openops']}}",
+                        "conversationId": "C08LZL63FB9",
+                        "text": {
+                          "text": "The under-utilized EIPs have been successfully retrieved for the following:\nAWS Account ID :- \" {{step_6}} \"\nPublic IP :- \"{{step_3['item']['PublicIp']}}\"\nRegion :- \"{{step_3['item']['NetworkBorderGroup']}}\"\n<http://192.168.10.160/tables|Click here to view details>."
+                        },
+                        "headerText": {
+                          "headerText": "[Update] Under-Utilized EIPs Fetched"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
 ```
 
-- Now go to Prometheus dashboard and click on status, select target, you can see our metrics are up and running.
+</details>
 
+---
 
-![Screenshot 2025-04-09 141835](https://github.com/user-attachments/assets/707e40dc-63d3-4456-a463-4abf9c052b44)
+## Usage
 
+1. **Update the AWS Connection**: Ensure that your OpenOps AWS connection (`aws-prashant`) is correctly set with valid credentials or IAM Role.
+2. **Configure IAM Role**: Apply the Trust and Permissions policies provided.
+3. **Deploy Workflow**: Import the exported JSON into your OpenOps environment.
+4. **Monitor Results**:
+   - Slack notifications in channel `C08LZL63FB9`
+   - OpenOps table named **"Under-utilized EIPs"**
 
-
-
-___
-## Step 8. Setting up Grafana Dashboards 
-
-- go to the Connections and select the Data sources option.
-
-![image](https://github.com/user-attachments/assets/478be982-e4c8-4f94-a88d-54726baa63ae)
-
-___
-
-- Search for Prometheus in the search bar and select it.
-
-![image](https://github.com/user-attachments/assets/00531fd9-f75e-4617-9db6-4dccefe18b7c)
-
-___
-
-- In connection, in Prometheus server URL, give the server url on which our prometheus is running.
-
-
-![image](https://github.com/user-attachments/assets/d321d584-0774-4893-9d18-04556296f6b7)
-
-___
-
-- After this click on save and test button. You will see the message for prometheus being successfully queried.
-
-
-![image](https://github.com/user-attachments/assets/a94f3bac-9563-4025-9f5b-2d92db789d8d)
-
-___
-
-- Here you can start your own new dashboard by adding a visualization.
-
-
-  So click on + Add visualization option button.
-
-  Here you can import dashboard.
-
-![image](https://github.com/user-attachments/assets/3fe72a54-0383-43a3-9341-993d6946ae6e)
-
-___
-
-
-![image](https://github.com/user-attachments/assets/21b35188-1331-4ede-a719-300741748d38)
-
-___
-
-####  **Prometheus Dashboards status target**
-![image](https://github.com/user-attachments/assets/042fa96b-2a5e-4066-959d-4e75e69fb548)
-
-
-## Best practices
-
-- **Select Relevant Metrics:** Choose key metrics to monitor (e.g., latency, memory usage).
-- **Simulate Scenarios:** Test with various workloads to evaluate performance.
-- **Optimize Dashboards:** Create clear and actionable dashboards.
-- **Document Findings:** Record issues and resolutions for future reference.
+---
 
 ## Conclusion
-In conclusion, implementing a monitoring solution for Redis databases using Prometheus and Grafana is essential for maintaining the health, performance, and reliability of your Redis environment. By following the steps outlined in this guide, you can effectively set up and configure Prometheus to collect metrics from Redis instances, visualize these metrics in Grafana dashboards, and proactively manage your Redis infrastructure.
 
-___
-
-### **Contact Information**
-
-| **Name** | **Email address**            |
-|----------|-------------------------------|
-| Prashant Sharma | prashant.sharma@mygurukulam.co | 
-
-
-## Reference Links
-
-| **Links**                                           | 
-|-----------------------------------------------------|
-| [Redis monitoring guide](https://www.site24x7.com/learn/redis-monitoring-metrics.html)  | 
-| [What are Hit and Miss Ratios?](https://wp-rocket.me/blog/calculate-hit-and-miss-ratios/) | 
-|[Middleware Monitoring Documentation](https://github.com/snaatak-Zero-Downtime-Crew/Documentation/blob/Sheetal-SCRUM-411/Design%20Monitoring/Middleware/Key%20Performance%20Metrices/README.md)|
+This workflow automates detection and action on unassociated EIPs, helps reduce AWS costs, and ensures traceability through table logging and Slack alerts. You can easily extend it with features like approval gates or auto-deletion in future iterations.
