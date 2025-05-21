@@ -1,56 +1,54 @@
-# Release Under-Utilized EIPs
+# Fetching Stopped EC2 Instances
  
-This repository contains an automated OpenOps workflow that releases Elastic IPs (EIPs) previously tagged as under-utilized and marked for deletion. The workflow removes such EIPs, logs the action in an internal table, and sends a notification via Slack to alert your team.
+This workflow automates the detection of stopped EC2 instances in your AWS environment, requests team approval via Slack to tag these instances for deletion, updates an OpenOps table with the instance details and tagging status, and sends notifications based on approval decisions.
+
 
 ---
 
 ## Table of Contents
 
-- [Overview](#overview)  
-- [Workflow Details](#workflow-details)  
-- [Dependencies](#dependencies)  
-- [Configuration](#configuration)  
-  - [AWS Authentication](#aws-authentication)  
-  - [IAM Role Definition](#iam-role-definition)  
-- [Expected Output](#expected-output)  
-  - [OpenOps Table Sample](#openops-table-sample)  
-  - [Slack Notification Sample](#slack-notification-sample)  
-- [Exported Workflow JSON](#exported-workflow-json)  
-- [Usage](#usage)  
+- [Overview](#overview)
+- [Workflow Details](#workflow-details)
+- [Dependencies](#dependencies)
+- [Configuration](#configuration)
+  - [AWS Authentication](#aws-authentication)
+  - [IAM Role Definition](#iam-role-definition)
+- [Expected Output](#expected-output)
+  - [OpenOps Table Sample](#openops-table-sample)
+  - [Slack Approval Message Sample](#slack-approval-message-sample)
+- [Exported Workflow JSON](#exported-workflow-json)
+- [Usage](#usage)
 - [Conclusion](#conclusion)
 
 ---
 
 ## Overview
 
-This workflow is designed to help reduce AWS costs by automating the release of unused Elastic IPs (EIPs) that were previously tagged for deletion. It periodically:
-- Retrieves the AWS account ID.
-- Fetches EIPs from the OpenOps table marked for deletion.
-- Releases each EIP using the AWS CLI.
-- Updates the table to reflect the release.
-- Sends a Slack notification with a summary of the released EIPs.
+This workflow helps manage AWS costs by identifying stopped EC2 instances daily, requesting approval to tag them for deletion via Slack, logging instance metadata and tagging status in a centralized OpenOps table, and notifying the team of actions taken.
+
 
 ---
 
 ## Workflow Details
 
-- **Schedule**: Runs daily at 07:00 UTC.  
-- **Main Actions**:
-  - Retrieve AWS Account ID using the AWS CLI.
-  - Query OpenOps table for EIPs marked for deletion.
-  - Release the EIPs using `release-address`.
-  - Update table records to reflect released status.
-  - Send Slack notification to the configured channel.
+- **Schedule:** Executes daily at 06:00 UTC.
+- **Main Steps:**
+  1. Retrieve AWS Account ID.
+  2. List all stopped EC2 instances.
+  3. Send a Slack message to request tagging approval.
+  4. If approved, tag instances with `Action=Mark_For_Deletion` and update the table.
+  5. If denied, update the table without tagging.
+  6. Notify the team with the status of the operation.
 
 ---
 
 ## Dependencies
 
-| Component          | Description                                                    |
-|--------------------|----------------------------------------------------------------|
-| **Slack Channel**  | `C08LZL63FB9` – Used to send notifications.                    |
-| **AWS Connection** | Connection named `<aws-account>`, which manages AWS CLI credentials. |
-| **OpenOps Table**  | The workflow uses `@openops/block-openops-tables` to manage EIP lifecycle records. |
+| Component         | Description                                                                  |
+|------------------|------------------------------------------------------------------------------|
+| Slack Channels    | Approval channel (`C08M6UHP33Q`), notification channel (`C08LZL63FB9`).     |
+| AWS Connection    | AWS credentials or IAM role with permissions to describe/tag instances.     |
+| OpenOps Table     | Table named `Stopped EC2 Instances` to track instance metadata and status.  |
 
 ---
 
@@ -66,43 +64,41 @@ The workflow supports two methods:
 
 ### IAM Role Definition
 
-**Role Name**: `ReleaseEIPWorkflowRole`
+- **Role Name:** `StoppedInstancesTaggerRole`
 
-#### Trust Policy
-
+**Trust Policy:**
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
       "Effect": "Allow",
-      "Principal": {
-        "Service": "ec2.amazonaws.com"
-      },
+      "Principal": { "Service": "ec2.amazonaws.com" },
       "Action": "sts:AssumeRole"
     }
   ]
 }
-```
 
-#### Permissions Policy
 
+**Permission Policy:**
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "ReleaseElasticIPs",
+      "Sid": "DescribeStoppedInstances",
       "Effect": "Allow",
-      "Action": [
-        "ec2:ReleaseAddress",
-        "ec2:DescribeAddresses"
-      ],
+      "Action": "ec2:DescribeInstances",
       "Resource": "*"
+    },
+    {
+      "Sid": "TagStoppedInstances",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:<region>:<account-id>:instance/*"
     }
   ]
 }
-```
 
 ---
 
@@ -110,22 +106,27 @@ The workflow supports two methods:
 
 ### OpenOps Table Sample
 
-| Allocation ID  | Public IP    | Region     | AWS Account ID | Released |
-|----------------|--------------|------------|----------------|----------|
-| eipalloc-0abc  | 13.58.123.1  | us-east-2  | 123456789012   | True     |
+| Instance ID      | Instance Name | Private IP | Instance Type | Volume ID        | Availability Zone | Marked For Deletion |
+| ---------------- | ------------- | ---------- | ------------- | ---------------- | ----------------- | ------------------- |
+| i-0abcdef1234567 | web-server-01 | 10.0.1.25  | t3.medium     | vol-0123456789ab | us-east-1a        | True                |
 
 ---
 
 ### Slack Notification Sample
 
 ```
-[Success] Under-Utilized EIPs Released
+[Approval Request] Stopped EC2 Instances Detected
 
-The following EIPs have been successfully released:
-AWS Account ID :- "123456789012"
-Public IP :- "13.58.123.1"
-Region :- "us-east-2"
-<http://192.168.10.160/tables|Click here to view full release records>.
+AWS Account: 123456789012
+
+Instances found stopped:
+- i-0abcdef1234567 (web-server-01) - 10.0.1.25 - t3.medium
+- i-0abcdef1234568 (app-server-01) - 10.0.2.10 - t3.large
+
+Please approve tagging these instances for deletion:
+[Approve] | [Deny]
+
+<http://192.168.10.160/tables|Click here to view instance details>
 ```
 
 ---
@@ -137,14 +138,14 @@ Region :- "us-east-2"
 
 ```json
 {
-  "created": "1747806230969",
-  "updated": "1747806230969",
-  "name": "Release Under Utilised EIPs",
+  "created": "1747828362032",
+  "updated": "1747828362032",
+  "name": "Tagging stopped instances and adding in table",
   "tags": [],
   "services": [],
   "domains": [],
   "template": {
-    "displayName": "Release Under Utilised EIPs",
+    "displayName": "Tagging stopped instances and adding in table",
     "trigger": {
       "name": "trigger",
       "valid": true,
@@ -157,8 +158,8 @@ Region :- "us-east-2"
         "packageType": "REGISTRY",
         "input": {
           "timezone": "UTC",
-          "hour_of_the_day": 7,
-          "run_on_weekends": true
+          "hour_of_the_day": 6,
+          "run_on_weekends": false
         },
         "inputUiInfo": {
           "customizedInputs": {}
@@ -166,7 +167,7 @@ Region :- "us-east-2"
         "triggerName": "every_day"
       },
       "nextAction": {
-        "name": "step_1",
+        "name": "step_13",
         "type": "BLOCK",
         "valid": true,
         "settings": {
@@ -192,7 +193,7 @@ Region :- "us-east-2"
           }
         },
         "nextAction": {
-          "name": "step_2",
+          "name": "step_14",
           "type": "BLOCK",
           "valid": true,
           "settings": {
@@ -200,7 +201,7 @@ Region :- "us-east-2"
               "auth": "{{connections['aws-prashant']}}",
               "dryRun": false,
               "account": {},
-              "commandToRun": "aws ec2 describe-addresses --filters \"Name=tag:Action,Values=MARK_FOR_DELETION\""
+              "commandToRun": "aws ec2 describe-instances \\\n  --filters Name=instance-state-name,Values=stopped \\\n  --query \"Reservations[].Instances[].{\n    InstanceId: InstanceId,\n    PrivateIp: PrivateIpAddress,\n    InstanceType: InstanceType,\n    VolumeId: BlockDeviceMappings[0].Ebs.VolumeId,\n    AvailabilityZone: Placement.AvailabilityZone,\n    Name: (Tags[?Key=='Name'] | [0].Value) || 'unknown'\n  }\" \\\n  --output json\n"
             },
             "blockName": "@openops/block-aws",
             "blockType": "OFFICIAL",
@@ -212,7 +213,7 @@ Region :- "us-east-2"
             "blockVersion": "~0.0.3",
             "errorHandlingOptions": {
               "retryOnFailure": {
-                "value": false
+                "value": true
               },
               "continueOnFailure": {
                 "value": false
@@ -228,7 +229,7 @@ Region :- "us-east-2"
                 [
                   {
                     "operator": "BOOLEAN_IS_TRUE",
-                    "firstValue": "{{step_2}}"
+                    "firstValue": "{{step_14}}"
                   }
                 ]
               ],
@@ -236,20 +237,20 @@ Region :- "us-east-2"
                 "customizedInputs": {}
               }
             },
-            "displayName": "Marked EIPs Found",
+            "displayName": "Stopped Instance Present",
             "onSuccessAction": {
-              "name": "step_4",
+              "name": "step_5",
               "type": "LOOP_ON_ITEMS",
               "valid": true,
               "settings": {
-                "items": "{{step_2['Addresses']}}",
+                "items": "{{step_14}}",
                 "inputUiInfo": {
                   "customizedInputs": {}
                 }
               },
               "displayName": "Loop on Items",
               "firstLoopAction": {
-                "name": "step_8",
+                "name": "step_1",
                 "type": "BLOCK",
                 "valid": true,
                 "settings": {
@@ -272,7 +273,7 @@ Region :- "us-east-2"
                   }
                 },
                 "nextAction": {
-                  "name": "step_10",
+                  "name": "step_7",
                   "type": "BLOCK",
                   "valid": true,
                   "settings": {
@@ -280,13 +281,13 @@ Region :- "us-east-2"
                       "auth": "{{connections['slack-Openops']}}",
                       "file": null,
                       "text": {
-                        "text": "Found EIP:-{{step_4['item']['PublicIp']}} \nin AWS Account :- {{step_1[0]['accountId']}}\nAction to release EIP:-\n<{{step_8['approvalLink']}}| Click here to Approve>\n<{{step_8['disapprovalLink']}}| Click here to Dismiss>"
+                        "text": "Found Instances:-  {{step_5['item']['InstanceId']}}\nin AWS Account :- {{step_13[0]['accountId']}}\nAction to Mark EIP for deletion :-\n<{{step_1['approvalLink']}}| Click here to Approve>\n<{{step_1['disapprovalLink']}}| Click here to Dismiss>"
                       },
                       "blocks": {},
                       "threadTs": null,
                       "username": null,
                       "headerText": {
-                        "headerText": "Release Under Utilized EIP"
+                        "headerText": "Approval Request For Tagging Stopped Instances"
                       },
                       "conversationId": "C08M6UHP33Q",
                       "blockKitEnabled": false
@@ -301,7 +302,7 @@ Region :- "us-east-2"
                     "blockVersion": "~0.5.2",
                     "errorHandlingOptions": {
                       "retryOnFailure": {
-                        "value": true
+                        "value": false
                       },
                       "continueOnFailure": {
                         "value": false
@@ -309,7 +310,7 @@ Region :- "us-east-2"
                     }
                   },
                   "nextAction": {
-                    "name": "step_12",
+                    "name": "step_2",
                     "type": "BLOCK",
                     "valid": true,
                     "settings": {
@@ -332,7 +333,7 @@ Region :- "us-east-2"
                       }
                     },
                     "nextAction": {
-                      "name": "step_7",
+                      "name": "step_8",
                       "type": "BRANCH",
                       "valid": true,
                       "settings": {
@@ -340,7 +341,7 @@ Region :- "us-east-2"
                           [
                             {
                               "operator": "BOOLEAN_IS_TRUE",
-                              "firstValue": "{{step_12['approved']}}"
+                              "firstValue": "{{step_2['approved']}}"
                             }
                           ]
                         ],
@@ -348,29 +349,69 @@ Region :- "us-east-2"
                           "customizedInputs": {}
                         }
                       },
-                      "displayName": "Condition",
+                      "displayName": "Need to Add Tag?",
                       "onFailureAction": {
-                        "name": "step_11",
+                        "name": "step_9",
                         "type": "BLOCK",
                         "valid": true,
                         "settings": {
                           "input": {
-                            "auth": "{{connections['aws-prashant']}}",
-                            "dryRun": false,
-                            "account": {},
-                            "commandToRun": "aws ec2 delete-tags \\\n  --resources {{step_4['item']['AllocationId']}} \\\n  --tags Key=Action,Value=MARK_FOR_DELETION\n"
+                            "tableName": "Stopped EC2 Instances",
+                            "rowPrimaryKey": {
+                              "rowPrimaryKey": "{{step_5['item']['InstanceId']}}"
+                            },
+                            "fieldsProperties": {
+                              "fieldsProperties": [
+                                {
+                                  "fieldName": "Instance Name",
+                                  "newFieldValue": {
+                                    "newFieldValue": "{{step_5['item']['Name']}}"
+                                  }
+                                },
+                                {
+                                  "fieldName": "Private IP",
+                                  "newFieldValue": {
+                                    "newFieldValue": "{{step_5['item']['PrivateIp']}}"
+                                  }
+                                },
+                                {
+                                  "fieldName": "Instance Type",
+                                  "newFieldValue": {
+                                    "newFieldValue": "{{step_5['item']['InstanceType']}}"
+                                  }
+                                },
+                                {
+                                  "fieldName": "Volume ID",
+                                  "newFieldValue": {
+                                    "newFieldValue": "{{step_5['item']['VolumeId']}}"
+                                  }
+                                },
+                                {
+                                  "fieldName": "Marked For Deletion",
+                                  "newFieldValue": {
+                                    "newFieldValue": false
+                                  }
+                                },
+                                {
+                                  "fieldName": "Availability Zone",
+                                  "newFieldValue": {
+                                    "newFieldValue": "{{step_5['item']['AvailabilityZone']}}"
+                                  }
+                                }
+                              ]
+                            }
                           },
-                          "blockName": "@openops/block-aws",
+                          "blockName": "@openops/block-openops-tables",
                           "blockType": "OFFICIAL",
-                          "actionName": "aws_cli",
+                          "actionName": "update_record",
                           "inputUiInfo": {
                             "customizedInputs": {}
                           },
                           "packageType": "REGISTRY",
-                          "blockVersion": "~0.0.3",
+                          "blockVersion": "~0.0.1",
                           "errorHandlingOptions": {
                             "retryOnFailure": {
-                              "value": false
+                              "value": true
                             },
                             "continueOnFailure": {
                               "value": false
@@ -378,49 +419,48 @@ Region :- "us-east-2"
                           }
                         },
                         "nextAction": {
-                          "name": "step_9",
+                          "name": "step_11",
                           "type": "BLOCK",
                           "valid": true,
                           "settings": {
                             "input": {
-                              "tableName": "Under-utilized EIPs",
-                              "rowPrimaryKey": {
-                                "rowPrimaryKey": "{{step_4['item']['AllocationId']}}"
+                              "auth": "{{connections['slack-Openops']}}",
+                              "file": null,
+                              "text": {
+                                "text": "The Stopped Instances have been successfully retrieved but not-marked for deletion:\nAWS Account ID :- \" {{step_13[0]['accountId']}}\"\nInstance ID :- \"{{step_5['item']['InstanceId']}}\"\nAvailability zone :- \"{{step_5['item']['AvailabilityZone']}}\"\nFor Details:- <http://192.168.10.160/tables|Click Here>"
                               },
-                              "fieldsProperties": {
-                                "fieldsProperties": [
-                                  {
-                                    "fieldName": "Status",
-                                    "newFieldValue": {
-                                      "newFieldValue": "Not-deleted"
-                                    }
-                                  }
-                                ]
-                              }
+                              "blocks": {},
+                              "threadTs": null,
+                              "username": null,
+                              "headerText": {
+                                "headerText": "[Update] Stopped Instances Fetched"
+                              },
+                              "conversationId": "C08LZL63FB9",
+                              "blockKitEnabled": false
                             },
-                            "blockName": "@openops/block-openops-tables",
+                            "blockName": "@openops/block-slack",
                             "blockType": "OFFICIAL",
-                            "actionName": "update_record",
+                            "actionName": "send_slack_message",
                             "inputUiInfo": {
                               "customizedInputs": {}
                             },
                             "packageType": "REGISTRY",
-                            "blockVersion": "~0.0.1",
+                            "blockVersion": "~0.5.2",
                             "errorHandlingOptions": {
                               "retryOnFailure": {
-                                "value": false
+                                "value": true
                               },
                               "continueOnFailure": {
                                 "value": false
                               }
                             }
                           },
-                          "displayName": "Mark Not-Deleted"
+                          "displayName": "Send Message"
                         },
-                        "displayName": "Remove Deletion Tag"
+                        "displayName": "Add or Update Record Copy Copy"
                       },
                       "onSuccessAction": {
-                        "name": "step_5",
+                        "name": "step_12",
                         "type": "BLOCK",
                         "valid": true,
                         "settings": {
@@ -428,7 +468,7 @@ Region :- "us-east-2"
                             "auth": "{{connections['aws-prashant']}}",
                             "dryRun": false,
                             "account": {},
-                            "commandToRun": "aws ec2 release-address --allocation-id {{step_4['item']['AllocationId']}}"
+                            "commandToRun": "aws ec2 create-tags \\\n  --resources {{step_5['item']['InstanceId']}} \\\n  --tags Key=Action,Value=Mark_For_Deletion"
                           },
                           "blockName": "@openops/block-aws",
                           "blockType": "OFFICIAL",
@@ -440,7 +480,7 @@ Region :- "us-east-2"
                           "blockVersion": "~0.0.3",
                           "errorHandlingOptions": {
                             "retryOnFailure": {
-                              "value": false
+                              "value": true
                             },
                             "continueOnFailure": {
                               "value": false
@@ -448,21 +488,51 @@ Region :- "us-east-2"
                           }
                         },
                         "nextAction": {
-                          "name": "step_6",
+                          "name": "step_4",
                           "type": "BLOCK",
                           "valid": true,
                           "settings": {
                             "input": {
-                              "tableName": "Under-utilized EIPs",
+                              "tableName": "Stopped EC2 Instances",
                               "rowPrimaryKey": {
-                                "rowPrimaryKey": "{{step_4['item']['AllocationId']}}"
+                                "rowPrimaryKey": "{{step_5['item']['InstanceId']}}"
                               },
                               "fieldsProperties": {
                                 "fieldsProperties": [
                                   {
-                                    "fieldName": "Status",
+                                    "fieldName": "Instance Name",
                                     "newFieldValue": {
-                                      "newFieldValue": "Deleted"
+                                      "newFieldValue": "{{step_5['item']['Name']}}"
+                                    }
+                                  },
+                                  {
+                                    "fieldName": "Private IP",
+                                    "newFieldValue": {
+                                      "newFieldValue": "{{step_5['item']['PrivateIp']}}"
+                                    }
+                                  },
+                                  {
+                                    "fieldName": "Instance Type",
+                                    "newFieldValue": {
+                                      "newFieldValue": "{{step_5['item']['InstanceType']}}"
+                                    }
+                                  },
+                                  {
+                                    "fieldName": "Volume ID",
+                                    "newFieldValue": {
+                                      "newFieldValue": "{{step_5['item']['VolumeId']}}"
+                                    }
+                                  },
+                                  {
+                                    "fieldName": "Marked For Deletion",
+                                    "newFieldValue": {
+                                      "newFieldValue": true
+                                    }
+                                  },
+                                  {
+                                    "fieldName": "Availability Zone",
+                                    "newFieldValue": {
+                                      "newFieldValue": "{{step_5['item']['AvailabilityZone']}}"
                                     }
                                   }
                                 ]
@@ -478,16 +548,55 @@ Region :- "us-east-2"
                             "blockVersion": "~0.0.1",
                             "errorHandlingOptions": {
                               "retryOnFailure": {
-                                "value": false
+                                "value": true
                               },
                               "continueOnFailure": {
                                 "value": false
                               }
                             }
                           },
-                          "displayName": "Mark Deleted"
+                          "nextAction": {
+                            "name": "step_10",
+                            "type": "BLOCK",
+                            "valid": true,
+                            "settings": {
+                              "input": {
+                                "auth": "{{connections['slack-Openops']}}",
+                                "file": null,
+                                "text": {
+                                  "text": "The Stopped Instances have been successfully retrieved and marked for deletion:\nAWS Account ID :- \" {{step_13[0]['accountId']}}\"\nInstance ID :- \"{{step_5['item']['InstanceId']}}\"\nAvailability zone :- \"{{step_5['item']['AvailabilityZone']}}\"\nFor Details:- <http://192.168.10.160/tables|Click Here>"
+                                },
+                                "blocks": {},
+                                "threadTs": null,
+                                "username": null,
+                                "headerText": {
+                                  "headerText": "[Update] Stopped Instances Fetched"
+                                },
+                                "conversationId": "C08LZL63FB9",
+                                "blockKitEnabled": false
+                              },
+                              "blockName": "@openops/block-slack",
+                              "blockType": "OFFICIAL",
+                              "actionName": "send_slack_message",
+                              "inputUiInfo": {
+                                "customizedInputs": {}
+                              },
+                              "packageType": "REGISTRY",
+                              "blockVersion": "~0.5.2",
+                              "errorHandlingOptions": {
+                                "retryOnFailure": {
+                                  "value": true
+                                },
+                                "continueOnFailure": {
+                                  "value": false
+                                }
+                              }
+                            },
+                            "displayName": "Send Message"
+                          },
+                          "displayName": "Add or Update Record"
                         },
-                        "displayName": "Release EIPs"
+                        "displayName": "Tag Instance for Deletion"
                       }
                     },
                     "displayName": "Wait for Approval"
@@ -498,7 +607,7 @@ Region :- "us-east-2"
               }
             }
           },
-          "displayName": "Fetch EIPs Marked For Deletion"
+          "displayName": "Fetch Stopped Instances"
         },
         "displayName": "Get Account ID"
       }
@@ -522,15 +631,12 @@ Region :- "us-east-2"
 
 ## Usage
 
-1. **Update the AWS Connection**: Ensure that your OpenOps AWS connection (`<aws-account>`) is correctly set with valid credentials or IAM Role.  
-2. **Configure IAM Role**: Apply the Trust and Permissions policies provided.  
-3. **Deploy Workflow**: Import the exported JSON into your OpenOps environment.  
-4. **Monitor Results**:
-   - Slack notifications in channel `C08LZL63FB9`
-   - OpenOps table named **"Under-utilized EIPs"**
-
+1. **Configure AWS Connection**: Ensure AWS credentials or IAM Role with required permissions are properly set in OpenOps connection.
+2. **Configure Slack Channels**: Make sure Slack tokens and channel IDs are correctly configured.
+3. **Import Workflow**: Upload the exported JSON into your OpenOps environment.
+4. **Monitor**: Check Slack for approval requests and notifications; view the Stopped EC2 Instances table for updated instance statuses.
 ---
 
 ## Conclusion
 
-This workflow automates the release of EIPs previously marked for deletion, helps reduce AWS costs, and ensures traceability through OpenOps table updates and Slack alerts. You can further extend this workflow to include approval steps or cost-tracking metrics.
+This workflow provides a streamlined, auditable process for managing stopped EC2 instances through team approval and tagging. It helps optimize AWS spend and maintain operational transparency. You can extend it with automatic cleanup actions or integrate it into broader cost governance frameworks.
