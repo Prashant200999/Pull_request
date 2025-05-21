@@ -1,46 +1,46 @@
-# Fetching Under-utilized EIP 
+# Release EIP with Table Update and Slack Notification
 
-This repository contains an automated OpenOps workflow that identifies under-utilized (unassociated) Elastic IPs (EIPs) in your AWS environment. The workflow tags these EIPs for deletion, logs the details in an internal table, and sends a notification via Slack to alert your team.
+This repository contains an automated OpenOps workflow that releases Elastic IPs (EIPs) previously tagged as under-utilized and marked for deletion. The workflow removes such EIPs, logs the action in an internal table, and sends a notification via Slack to alert your team.
 
 ---
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Workflow Details](#workflow-details)
-- [Dependencies](#dependencies)
-- [Configuration](#configuration)
-  - [AWS Authentication](#aws-authentication)
-  - [IAM Role Definition](#iam-role-definition)
-- [Expected Output](#expected-output)
-  - [OpenOps Table Sample](#openops-table-sample)
-  - [Slack Notification Sample](#slack-notification-sample)
-- [Exported Workflow JSON](#exported-workflow-json)
-- [Usage](#usage)
+- [Overview](#overview)  
+- [Workflow Details](#workflow-details)  
+- [Dependencies](#dependencies)  
+- [Configuration](#configuration)  
+  - [AWS Authentication](#aws-authentication)  
+  - [IAM Role Definition](#iam-role-definition)  
+- [Expected Output](#expected-output)  
+  - [OpenOps Table Sample](#openops-table-sample)  
+  - [Slack Notification Sample](#slack-notification-sample)  
+- [Exported Workflow JSON](#exported-workflow-json)  
+- [Usage](#usage)  
 - [Conclusion](#conclusion)
 
 ---
 
 ## Overview
 
-This workflow is designed to help reduce AWS costs by automating the detection and management of unused EIPs. It periodically:
+This workflow is designed to help reduce AWS costs by automating the release of unused Elastic IPs (EIPs) that were previously tagged for deletion. It periodically:
 - Retrieves the AWS account ID.
-- Lists unassociated (unused) EIPs.
-- Tags each found EIP with `Action=MARK_FOR_DELETION`.
-- Logs the details of these EIPs into an internal OpenOps table.
-- Sends a Slack notification with details for review.
+- Fetches EIPs from the OpenOps table marked for deletion.
+- Releases each EIP using the AWS CLI.
+- Updates the table to reflect the release.
+- Sends a Slack notification with a summary of the released EIPs.
 
 ---
 
 ## Workflow Details
 
-- **Schedule**: Runs daily at 06:00 UTC.
+- **Schedule**: Runs daily at 07:00 UTC.  
 - **Main Actions**:
   - Retrieve AWS Account ID using the AWS CLI.
-  - Use `describe-addresses` to list unassociated EIPs.
-  - Tag each unassociated EIP.
-  - Update a record in the OpenOps table with the EIP details.
-  - Notify the team via Slack with a summary message and a link to view the table.
+  - Query OpenOps table for EIPs marked for deletion.
+  - Release the EIPs using `release-address`.
+  - Update table records to reflect released status.
+  - Send Slack notification to the configured channel.
 
 ---
 
@@ -49,8 +49,8 @@ This workflow is designed to help reduce AWS costs by automating the detection a
 | Component          | Description                                                    |
 |--------------------|----------------------------------------------------------------|
 | **Slack Channel**  | `C08LZL63FB9` – Used to send notifications.                    |
-| **AWS Connection** | Connection named `<aws-account>`, which manages AWS CLI credentials. |
-| **OpenOps Table**  | The workflow uses `@openops/block-openops-tables` to log EIP details. |
+| **AWS Connection** | Connection named `aws-prashant`, which manages AWS CLI credentials. |
+| **OpenOps Table**  | The workflow uses `@openops/block-openops-tables` to manage EIP lifecycle records. |
 
 ---
 
@@ -59,14 +59,14 @@ This workflow is designed to help reduce AWS costs by automating the detection a
 ### AWS Authentication
 
 The workflow supports two methods:
-- **AWS Access Keys**: Configured within the `<aws-account>` connection.
+- **AWS Access Keys**: Configured within the `aws-prashant` connection.
 - **IAM Role-based Authentication**: Preferred for enhanced security.
 
 ---
 
 ### IAM Role Definition
 
-**Role Name**: `UnderutilizedEIPCleanupRole`
+**Role Name**: `ReleaseEIPWorkflowRole`
 
 #### Trust Policy
 
@@ -92,21 +92,13 @@ The workflow supports two methods:
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "ListElasticIPs",
+      "Sid": "ReleaseElasticIPs",
       "Effect": "Allow",
-      "Action": "ec2:DescribeAddresses",
+      "Action": [
+        "ec2:ReleaseAddress",
+        "ec2:DescribeAddresses"
+      ],
       "Resource": "*"
-    },
-    {
-      "Sid": "TagUnusedElasticIPs",
-      "Effect": "Allow",
-      "Action": "ec2:CreateTags",
-      "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "ec2:ResourceTag/Usage": "Unused"
-        }
-      }
     }
   ]
 }
@@ -118,22 +110,22 @@ The workflow supports two methods:
 
 ### OpenOps Table Sample
 
-| Allocation ID  | Public IP    | Region     | AWS Account ID | Marked For Deletion |
-|----------------|--------------|------------|----------------|----------------------|
-| eipalloc-0abc  | 13.58.123.1  | us-east-2  | 123456789012   | True                |
+| Allocation ID  | Public IP    | Region     | AWS Account ID | Released |
+|----------------|--------------|------------|----------------|----------|
+| eipalloc-0abc  | 13.58.123.1  | us-east-2  | 123456789012   | True     |
 
 ---
 
 ### Slack Notification Sample
 
 ```
-[Update] Under-Utilized EIPs Fetched
+[Success] Under-Utilized EIPs Released
 
-The under-utilized EIPs have been successfully retrieved for the following:
+The following EIPs have been successfully released:
 AWS Account ID :- "123456789012"
 Public IP :- "13.58.123.1"
 Region :- "us-east-2"
-<http://192.168.10.160/tables|Click here to view details>.
+<http://192.168.10.160/tables|Click here to view full release records>.
 ```
 
 ---
@@ -143,14 +135,13 @@ Region :- "us-east-2"
 <details>
 <summary>Click to expand the full OpenOps workflow JSON</summary>
 
-
 ```json
 {
-  "created": "1746447589671",
-  "updated": "1746447589671",
-  "name": "Under-utilized EIP tagging with addition in table",
+  "created": "1746448888888",
+  "updated": "1746448888888",
+  "name": "Release EIP with table update",
   "template": {
-    "displayName": "Under-utilized EIP tagging with addition in table",
+    "displayName": "Release EIP with table update",
     "trigger": {
       "type": "TRIGGER",
       "settings": {
@@ -158,7 +149,7 @@ Region :- "us-east-2"
         "blockVersion": "~0.1.5",
         "input": {
           "timezone": "UTC",
-          "hour_of_the_day": 6,
+          "hour_of_the_day": 7,
           "run_on_weekends": true
         }
       },
@@ -168,99 +159,75 @@ Region :- "us-east-2"
           "blockName": "@openops/block-aws",
           "actionName": "aws_cli",
           "input": {
-            "auth": "{{connections['<aws-account>']}}",
+            "auth": "{{connections['aws-prashant']}}",
             "commandToRun": "aws sts get-caller-identity --query \"Account\" --output text"
           }
         },
         "nextAction": {
           "type": "BLOCK",
           "settings": {
-            "blockName": "@openops/block-aws",
-            "actionName": "aws_cli",
+            "blockName": "@openops/block-openops-tables",
+            "actionName": "get_records",
             "input": {
-              "commandToRun": "aws ec2 describe-addresses --query \"Addresses[?AssociationId==null]\""
+              "tableName": "Under-utilized EIPs",
+              "filters": [
+                {
+                  "fieldName": "Marked For Deletion",
+                  "operation": "EQUALS",
+                  "value": true
+                }
+              ]
             }
           },
           "nextAction": {
-            "type": "BRANCH",
+            "type": "LOOP_ON_ITEMS",
             "settings": {
-              "conditions": [
-                [
-                  {
-                    "operator": "BOOLEAN_IS_TRUE",
-                    "firstValue": "{{step_2}}"
-                  }
-                ]
-              ]
+              "items": "{{step_2}}"
             },
-            "onSuccessAction": {
-              "type": "LOOP_ON_ITEMS",
+            "firstLoopAction": {
+              "type": "BLOCK",
               "settings": {
-                "items": "{{step_2}}"
+                "blockName": "@openops/block-aws",
+                "actionName": "aws_cli",
+                "input": {
+                  "commandToRun": "aws ec2 release-address --allocation-id {{step_3['item']['AllocationId']}}"
+                }
               },
-              "firstLoopAction": {
+              "nextAction": {
                 "type": "BLOCK",
                 "settings": {
-                  "blockName": "@openops/block-aws",
-                  "actionName": "aws_cli",
+                  "blockName": "@openops/block-openops-tables",
+                  "actionName": "update_record",
                   "input": {
-                    "commandToRun": "aws ec2 create-tags --resources {{step_3['item']['AllocationId']}} --tags Key=Action,Value=MARK_FOR_DELETION"
+                    "tableName": "Under-utilized EIPs",
+                    "rowPrimaryKey": {
+                      "rowPrimaryKey": "{{step_3['item']['AllocationId']}}"
+                    },
+                    "fieldsProperties": {
+                      "fieldsProperties": [
+                        {
+                          "fieldName": "Released",
+                          "newFieldValue": {
+                            "newFieldValue": true
+                          }
+                        }
+                      ]
+                    }
                   }
                 },
                 "nextAction": {
                   "type": "BLOCK",
                   "settings": {
-                    "blockName": "@openops/block-openops-tables",
-                    "actionName": "update_record",
+                    "blockName": "@openops/block-slack",
+                    "actionName": "send_slack_message",
                     "input": {
-                      "tableName": "Under-utilized EIPs",
-                      "rowPrimaryKey": {
-                        "rowPrimaryKey": "{{step_3['item']['AllocationId']}}"
+                      "auth": "{{connections['slack-Openops']}}",
+                      "conversationId": "C08LZL63FB9",
+                      "text": {
+                        "text": "The following EIPs have been successfully released:\nAWS Account ID :- \" {{step_2}} \"\nPublic IP :- \"{{step_3['item']['PublicIp']}}\"\nRegion :- \"{{step_3['item']['Region']}}\"\n<http://192.168.10.160/tables|Click here to view full release records>."
                       },
-                      "fieldsProperties": {
-                        "fieldsProperties": [
-                          {
-                            "fieldName": "PublicIp",
-                            "newFieldValue": {
-                              "newFieldValue": "{{step_3['item']['PublicIp']}}"
-                            }
-                          },
-                          {
-                            "fieldName": "Region",
-                            "newFieldValue": {
-                              "newFieldValue": "{{step_3['item']['NetworkBorderGroup']}}"
-                            }
-                          },
-                          {
-                            "fieldName": "AWS Account ID",
-                            "newFieldValue": {
-                              "newFieldValue": "{{step_6}}"
-                            }
-                          },
-                          {
-                            "fieldName": "Marked For Deletion",
-                            "newFieldValue": {
-                              "newFieldValue": true
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  "nextAction": {
-                    "type": "BLOCK",
-                    "settings": {
-                      "blockName": "@openops/block-slack",
-                      "actionName": "send_slack_message",
-                      "input": {
-                        "auth": "{{connections['slack-Openops']}}",
-                        "conversationId": "C08LZL63FB9",
-                        "text": {
-                          "text": "The under-utilized EIPs have been successfully retrieved for the following:\nAWS Account ID :- \" {{step_6}} \"\nPublic IP :- \"{{step_3['item']['PublicIp']}}\"\nRegion :- \"{{step_3['item']['NetworkBorderGroup']}}\"\n<http://192.168.10.160/tables|Click here to view details>."
-                        },
-                        "headerText": {
-                          "headerText": "[Update] Under-Utilized EIPs Fetched"
-                        }
+                      "headerText": {
+                        "headerText": "[Success] Under-Utilized EIPs Released"
                       }
                     }
                   }
@@ -281,9 +248,9 @@ Region :- "us-east-2"
 
 ## Usage
 
-1. **Update the AWS Connection**: Ensure that your OpenOps AWS connection (`<aws-account>`) is correctly set with valid credentials or IAM Role.
-2. **Configure IAM Role**: Apply the Trust and Permissions policies provided.
-3. **Deploy Workflow**: Import the exported JSON into your OpenOps environment.
+1. **Update the AWS Connection**: Ensure that your OpenOps AWS connection (`aws-prashant`) is correctly set with valid credentials or IAM Role.  
+2. **Configure IAM Role**: Apply the Trust and Permissions policies provided.  
+3. **Deploy Workflow**: Import the exported JSON into your OpenOps environment.  
 4. **Monitor Results**:
    - Slack notifications in channel `C08LZL63FB9`
    - OpenOps table named **"Under-utilized EIPs"**
@@ -292,4 +259,4 @@ Region :- "us-east-2"
 
 ## Conclusion
 
-This workflow automates detection and action on unassociated EIPs, helps reduce AWS costs, and ensures traceability through table logging and Slack alerts. You can easily extend it with features like approval gates or auto-deletion in future iterations.
+This workflow automates the release of EIPs previously marked for deletion, helps reduce AWS costs, and ensures traceability through OpenOps table updates and Slack alerts. You can further extend this workflow to include approval steps or cost-tracking metrics.
