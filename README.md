@@ -1,5 +1,5 @@
-# Release EIP with Table Update and Slack Notification
-
+# Release Under-Utilized EIPs
+ 
 This repository contains an automated OpenOps workflow that releases Elastic IPs (EIPs) previously tagged as under-utilized and marked for deletion. The workflow removes such EIPs, logs the action in an internal table, and sends a notification via Slack to alert your team.
 
 ---
