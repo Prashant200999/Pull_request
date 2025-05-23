@@ -118,14 +118,12 @@ The workflow supports two methods:
 ### Slack Notification Sample
 
 [Found Snapshots 30 Days Older]
-
-AWS Account :- 123456789012
-Snapshot ID :- snap-0abc123def
-Volume Size:- 50GB
-
+AWS Account :- 108497487224
+Snapshot ID :- snap-0a7e17c6df524f031
+Volume Size:- 8
 Tag Snapshot as "Old-Snapshot=True"
-<{{approvalLink}}|Click here to Add Tag>
-<{{disapprovalLink}}|Click here to Dismiss>
+Click here to Add Tag
+Click here to Dismiss
 
 ---
 
