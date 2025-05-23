@@ -1,4 +1,4 @@
-# Fetch Snapshots Older Than 30 Days
+# Fetch Snapshots Older Than N Days
  
 This workflow automates the detection of EBS snapshots older than 30 days in your AWS environment, requests team approval via Slack to tag these snapshots as old, updates an OpenOps table with snapshot details and tagging status, and sends notifications based on approval decisions.
 
