@@ -1,30 +1,29 @@
-# Fetching Stopped EC2 Instances
+# Fetch Snapshots Older Than 30 Days
  
-This workflow automates the detection of stopped EC2 instances tagged with Action=Mark_For_Deletion in your AWS environment, requests team approval via Slack to terminate these instances, optionally offers AMI backup creation before termination, updates an OpenOps table with the instance details and termination status, and sends notifications based on approval decisions.
+This workflow automates the detection of EBS snapshots older than 30 days in your AWS environment, requests team approval via Slack to tag these snapshots as old, updates an OpenOps table with snapshot details and tagging status, and sends notifications based on approval decisions.
 
 ---
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Workflow Details](#workflow-details)
-- [Dependencies](#dependencies)
-- [Configuration](#configuration)
-  - [AWS Authentication](#aws-authentication)
-  - [IAM Role Definition](#iam-role-definition)
-- [Expected Output](#expected-output)
-  - [OpenOps Table Sample](#openops-table-sample)
-  - [Slack Approval Message Sample](#slack-approval-message-sample)
-- [Exported Workflow JSON](#exported-workflow-json)
-- [Usage](#usage)
+- [Overview](#overview)  
+- [Workflow Details](#workflow-details)  
+- [Dependencies](#dependencies)  
+- [Configuration](#configuration)  
+  - [AWS Authentication](#aws-authentication)  
+  - [IAM Role Definition](#iam-role-definition)  
+- [Expected Output](#expected-output)  
+  - [OpenOps Table Sample](#openops-table-sample)  
+  - [Slack Notification Sample](#slack-notification-sample)  
+- [Exported Workflow JSON](#exported-workflow-json)  
+- [Usage](#usage)  
 - [Conclusion](#conclusion)
 
 ---
 
 ## Overview
 
-This workflow helps manage AWS costs by identifying stopped EC2 instances tagged for deletion daily, requesting approval via Slack to terminate them, optionally creating AMI backups before termination, logging instance metadata and termination status in a centralized OpenOps table, and notifying the team of actions taken.
-
+This workflow helps manage AWS storage costs by identifying EBS snapshots older than 30 days, requesting approval via Slack to tag them as old, logging snapshot metadata and tagging status in a centralized OpenOps table, and notifying the team of actions taken.
 
 ---
 
@@ -32,12 +31,17 @@ This workflow helps manage AWS costs by identifying stopped EC2 instances tagged
 
 - **Schedule:** Executes daily at 06:00 UTC.
 - **Main Steps:**
-  1. Retrieve AWS Account ID.
-  2. List all stopped EC2 instances tagged with `Action=Mark_For_Deletion`.
-  3. Send a Slack message to request termination approval.
-  4. If approved, optionally create AMI backup, then terminate the instances and update the OpenOps table.
-  5. If denied, remove deletion tags and update the OpenOps table.
-  6. Notify the team with the status of the termination process.
+1. Retrieves the AWS Account ID.
+2. Calculates the date 30 days prior to the current date.
+3. Queries AWS EC2 for snapshots created before the calculated date.
+4. For each snapshot found:
+   - Sends an approval request via Slack to tag the snapshot as Old-Snapshot=True.
+   - Waits for manual approval or disapproval through Slack.
+   - Upon approval, tags the snapshot accordingly in AWS.
+   - Updates the OpenOps table with tagging status.
+
+5. Sends a notification message to Slack with the snapshot status (tagged or dismissed).
+
 ---
 
 ## Dependencies
@@ -45,8 +49,8 @@ This workflow helps manage AWS costs by identifying stopped EC2 instances tagged
 | Component         | Description                                                                  |
 |-------------------|------------------------------------------------------------------------------|
 | Slack Channels    | Approval channel (`C08M6UHP33Q`), notification channel (`C08LZL63FB9`).      |
-| AWS Connection    | AWS credentials or IAM role with permissions to describe, terminate instances.|
-| OpenOps Table     | Table named `Terminated EC2 Instances` to track instance metadata and status.|
+| AWS Connection    | AWS connection named <AWS-Account> with necessary permissions.|
+| OpenOps Table     | Table named `Snapshots_30Days_Older` to track instance metadata and status.|
 
 ---
 
@@ -62,7 +66,7 @@ The workflow supports two methods:
 
 ### IAM Role Definition
 
-- **Role Name:** `StoppedInstancesTerminatorRole`
+- **Role Name:** `EBSVolumeManagementRole`
 
 **Trust Policy:**
 ```json
@@ -84,23 +88,20 @@ The workflow supports two methods:
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "DescribeStoppedInstances",
+      "Sid": "DescribeSnapshots",
       "Effect": "Allow",
-      "Action": "ec2:DescribeInstances",
+      "Action": "ec2:DescribeSnapshots",
       "Resource": "*"
     },
     {
-      "Sid": "TerminateInstances",
+      "Sid": "TagSnapshots",
       "Effect": "Allow",
-      "Action": [
-        "ec2:TerminateInstances",
-        "ec2:CreateTags",
-        "ec2:CreateImage"
-      ],
-      "Resource": "arn:aws:ec2:<region>:<account-id>:instance/*"
+      "Action": "ec2:CreateTags",
+      "Resource": "arn:aws:ec2:<region>:<account-id>:snapshot/*"
     }
   ]
 }
+
 ```
 ---
 
@@ -108,25 +109,23 @@ The workflow supports two methods:
 
 ### OpenOps Table Sample
 
-| Instance ID      | Instance Name | Private IP | Instance Type | Volume ID        | Availability Zone | AMI ID        | Termination Approved | Termination Status |
-| ---------------- | ------------- | ---------- | ------------- | ---------------- | ----------------- | ------------- | -------------------- | ------------------ |
-| i-0abcdef1234567 | web-server-01 | 10.0.1.25  | t3.medium     | vol-0123456789ab | us-east-1a        | ami-0abc12345 | True                 | Terminated         |
+| Account ID   | Snapshot ID     | Volume Size (GB) | Marked As Older |
+| ------------ | --------------- | ---------------- | --------------- |
+| 123456789012 | snap-0abc123def | 50               | True            |
 
 ---
 
 ### Slack Notification Sample
 
-[Approval Request] Stopped EC2 Instances Detected
+[Found Snapshots 30 Days Older]
 
-AWS Account: 123456789012
+AWS Account :- 123456789012
+Snapshot ID :- snap-0abc123def
+Volume Size:- 50GB
 
-Instances found stopped:
-- i-0abcdef1234567 (web-server-01) - 10.0.1.25 - t3.medium
-
-Please approve tagging these instances for deletion:
-[Approve] | [Deny]
-
-<http://192.168.10.160/tables|Click here to view instance details>
+Tag Snapshot as "Old-Snapshot=True"
+<{{approvalLink}}|Click here to Add Tag>
+<{{disapprovalLink}}|Click here to Dismiss>
 
 ---
 
@@ -137,14 +136,14 @@ Please approve tagging these instances for deletion:
 
 ```json
 {
-  "created": "1747883845241",
-  "updated": "1747883845241",
-  "name": "Terminate Instances Marked_for_deletion",
+  "created": "1747989619862",
+  "updated": "1747989619862",
+  "name": "fetch snapshots older than 30 days",
   "tags": [],
   "services": [],
   "domains": [],
   "template": {
-    "displayName": "Terminate Instances Marked_for_deletion",
+    "displayName": "fetch snapshots older than 30 days",
     "trigger": {
       "name": "trigger",
       "valid": true,
@@ -157,7 +156,7 @@ Please approve tagging these instances for deletion:
         "packageType": "REGISTRY",
         "input": {
           "timezone": "UTC",
-          "hour_of_the_day": 7,
+          "hour_of_the_day": 6,
           "run_on_weekends": true
         },
         "inputUiInfo": {
@@ -192,24 +191,20 @@ Please approve tagging these instances for deletion:
           }
         },
         "nextAction": {
-          "name": "step_2",
-          "type": "BLOCK",
+          "name": "step_4",
+          "type": "CODE",
           "valid": true,
           "settings": {
             "input": {
-              "auth": "{{connections['aws-prashant']}}",
-              "dryRun": false,
-              "account": {},
-              "commandToRun": "aws ec2 describe-instances \\\n  --filters \"Name=instance-state-name,Values=stopped\" \"Name=tag:Action,Values=Mark_For_Deletion\" \\\n  --query \"Reservations[].Instances[].{\n    InstanceId: InstanceId,\n    PrivateIp: PrivateIpAddress,\n    InstanceType: InstanceType,\n    VolumeId: BlockDeviceMappings[0].Ebs.VolumeId,\n    AvailabilityZone: Placement.AvailabilityZone,\n    Name: (Tags[?Key=='Name'] | [0].Value) || 'unknown'\n  }\" \\\n  --output json"
+              "days": "1"
             },
-            "blockName": "@openops/block-aws",
-            "blockType": "OFFICIAL",
-            "actionName": "aws_cli",
+            "sourceCode": {
+              "code": "export const code = async (inputs) => {\n  const now = new Date();\n  const pastDate = new Date(now.getTime() - inputs.days * 24 * 60 * 60 * 1000);\n  return pastDate.toISOString().slice(0, 10);\n};\n",
+              "packageJson": "{}"
+            },
             "inputUiInfo": {
               "customizedInputs": {}
             },
-            "packageType": "REGISTRY",
-            "blockVersion": "~0.0.3",
             "errorHandlingOptions": {
               "retryOnFailure": {
                 "value": true
@@ -220,85 +215,76 @@ Please approve tagging these instances for deletion:
             }
           },
           "nextAction": {
-            "name": "step_3",
-            "type": "BRANCH",
+            "name": "step_2",
+            "type": "BLOCK",
             "valid": true,
             "settings": {
-              "conditions": [
-                [
-                  {
-                    "operator": "BOOLEAN_IS_TRUE",
-                    "firstValue": "{{step_2}}"
-                  }
-                ]
-              ],
+              "input": {
+                "auth": "{{connections['aws-prashant']}}",
+                "dryRun": false,
+                "account": {},
+                "commandToRun": "aws ec2 describe-snapshots \\\n  --owner-ids self \\\n  --query \"Snapshots[?StartTime<='{{step_4}}T00:00:00'].{SnapshotId: SnapshotId, VolumeSize: VolumeSize}\" \\\n  --output json"
+              },
+              "blockName": "@openops/block-aws",
+              "blockType": "OFFICIAL",
+              "actionName": "aws_cli",
               "inputUiInfo": {
                 "customizedInputs": {}
+              },
+              "packageType": "REGISTRY",
+              "blockVersion": "~0.0.3",
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": true
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
               }
             },
-            "displayName": "Marked Instances Found?",
-            "onSuccessAction": {
-              "name": "step_4",
-              "type": "LOOP_ON_ITEMS",
+            "nextAction": {
+              "name": "step_3",
+              "type": "BRANCH",
               "valid": true,
               "settings": {
-                "items": "{{step_2}}",
+                "conditions": [
+                  [
+                    {
+                      "operator": "BOOLEAN_IS_TRUE",
+                      "firstValue": "{{step_2}}"
+                    }
+                  ]
+                ],
                 "inputUiInfo": {
                   "customizedInputs": {}
                 }
               },
-              "displayName": "Loop on Items",
-              "firstLoopAction": {
+              "displayName": "Snapshots Found ?",
+              "onSuccessAction": {
                 "name": "step_5",
-                "type": "BLOCK",
+                "type": "LOOP_ON_ITEMS",
                 "valid": true,
                 "settings": {
-                  "input": {},
-                  "blockName": "@openops/block-approval",
-                  "blockType": "OFFICIAL",
-                  "actionName": "create_approval_links",
+                  "items": "{{step_2}}",
                   "inputUiInfo": {
                     "customizedInputs": {}
-                  },
-                  "packageType": "REGISTRY",
-                  "blockVersion": "~0.1.7",
-                  "errorHandlingOptions": {
-                    "retryOnFailure": {
-                      "value": true
-                    },
-                    "continueOnFailure": {
-                      "value": false
-                    }
                   }
                 },
-                "nextAction": {
+                "displayName": "Loop on Items",
+                "firstLoopAction": {
                   "name": "step_6",
                   "type": "BLOCK",
                   "valid": true,
                   "settings": {
-                    "input": {
-                      "auth": "{{connections['slack-Openops']}}",
-                      "file": null,
-                      "text": {
-                        "text": "Found Stopped Instance:- \" {{step_4['item']['InstanceId']}} \"\nmarked for deletion \nin AWS Account :- \" {{step_1[0]['accountId']}} \"\nAction to terminate the instance:-\n<{{step_5['approvalLink']}}| Click here to Approve>\n<{{step_5['disapprovalLink']}}| Click here to Dismiss>"
-                      },
-                      "blocks": {},
-                      "threadTs": null,
-                      "username": null,
-                      "headerText": {
-                        "headerText": null
-                      },
-                      "conversationId": "C08M6UHP33Q",
-                      "blockKitEnabled": false
-                    },
-                    "blockName": "@openops/block-slack",
+                    "input": {},
+                    "blockName": "@openops/block-approval",
                     "blockType": "OFFICIAL",
-                    "actionName": "send_slack_message",
+                    "actionName": "create_approval_links",
                     "inputUiInfo": {
                       "customizedInputs": {}
                     },
                     "packageType": "REGISTRY",
-                    "blockVersion": "~0.5.2",
+                    "blockVersion": "~0.1.7",
                     "errorHandlingOptions": {
                       "retryOnFailure": {
                         "value": true
@@ -309,22 +295,36 @@ Please approve tagging these instances for deletion:
                     }
                   },
                   "nextAction": {
-                    "name": "step_7",
+                    "name": "step_8",
                     "type": "BLOCK",
                     "valid": true,
                     "settings": {
-                      "input": {},
-                      "blockName": "@openops/block-approval",
+                      "input": {
+                        "auth": "{{connections['slack-Openops']}}",
+                        "file": null,
+                        "text": {
+                          "text": "AWS Account :- {{step_1[0]['accountId']}}\nSnapshot ID :- {{step_5['item']['SnapshotId']}}\nVolume Size:- {{step_5['item']['VolumeSize']}}GB\nTag Snapshot as \"Old-Snapshot=True\" \n<{{step_6['approvalLink']}}| Click here to Add Tag>\n<{{step_6['disapprovalLink']}}| Click here to Dismiss>"
+                        },
+                        "blocks": {},
+                        "threadTs": null,
+                        "username": null,
+                        "headerText": {
+                          "headerText": "[Found Snapshots 30 Days Older]"
+                        },
+                        "conversationId": "C08M6UHP33Q",
+                        "blockKitEnabled": false
+                      },
+                      "blockName": "@openops/block-slack",
                       "blockType": "OFFICIAL",
-                      "actionName": "wait_for_approval",
+                      "actionName": "send_slack_message",
                       "inputUiInfo": {
                         "customizedInputs": {}
                       },
                       "packageType": "REGISTRY",
-                      "blockVersion": "~0.1.7",
+                      "blockVersion": "~0.5.2",
                       "errorHandlingOptions": {
                         "retryOnFailure": {
-                          "value": true
+                          "value": false
                         },
                         "continueOnFailure": {
                           "value": false
@@ -332,119 +332,90 @@ Please approve tagging these instances for deletion:
                       }
                     },
                     "nextAction": {
-                      "name": "step_8",
-                      "type": "BRANCH",
+                      "name": "step_7",
+                      "type": "BLOCK",
                       "valid": true,
                       "settings": {
-                        "conditions": [
-                          [
-                            {
-                              "operator": "BOOLEAN_IS_TRUE",
-                              "firstValue": "{{step_7['approved']}}"
-                            }
-                          ]
-                        ],
+                        "input": {},
+                        "blockName": "@openops/block-approval",
+                        "blockType": "OFFICIAL",
+                        "actionName": "wait_for_approval",
                         "inputUiInfo": {
                           "customizedInputs": {}
+                        },
+                        "packageType": "REGISTRY",
+                        "blockVersion": "~0.1.7",
+                        "errorHandlingOptions": {
+                          "retryOnFailure": {
+                            "value": true
+                          },
+                          "continueOnFailure": {
+                            "value": false
+                          }
                         }
                       },
-                      "displayName": "Approved ?",
-                      "onFailureAction": {
-                        "name": "step_17",
-                        "type": "BLOCK",
+                      "nextAction": {
+                        "name": "step_9",
+                        "type": "BRANCH",
                         "valid": true,
                         "settings": {
-                          "input": {
-                            "tableName": "Stopped EC2 Instances",
-                            "rowPrimaryKey": {
-                              "rowPrimaryKey": "{{step_4['item']['InstanceId']}}"
-                            },
-                            "fieldsProperties": {
-                              "fieldsProperties": [
-                                {
-                                  "fieldName": "Instance Name",
-                                  "newFieldValue": {
-                                    "newFieldValue": "{{step_4['item']['Name']}}"
-                                  }
-                                },
-                                {
-                                  "fieldName": "Private IP",
-                                  "newFieldValue": {
-                                    "newFieldValue": "{{step_4['item']['PrivateIp']}}"
-                                  }
-                                },
-                                {
-                                  "fieldName": "Instance Type",
-                                  "newFieldValue": {
-                                    "newFieldValue": "{{step_4['item']['InstanceType']}}"
-                                  }
-                                },
-                                {
-                                  "fieldName": "Volume ID",
-                                  "newFieldValue": {
-                                    "newFieldValue": "{{step_4['item']['VolumeId']}}"
-                                  }
-                                },
-                                {
-                                  "fieldName": "Availability Zone",
-                                  "newFieldValue": {
-                                    "newFieldValue": "{{step_4['item']['AvailabilityZone']}}"
-                                  }
-                                },
-                                {
-                                  "fieldName": "Marked For Deletion",
-                                  "newFieldValue": {
-                                    "newFieldValue": false
-                                  }
-                                },
-                                {
-                                  "fieldName": "Status",
-                                  "newFieldValue": {
-                                    "newFieldValue": "Not Terminated"
-                                  }
-                                }
-                              ]
-                            }
-                          },
-                          "blockName": "@openops/block-openops-tables",
-                          "blockType": "OFFICIAL",
-                          "actionName": "update_record",
+                          "conditions": [
+                            [
+                              {
+                                "operator": "BOOLEAN_IS_TRUE",
+                                "firstValue": "{{step_7['approved']}}"
+                              }
+                            ]
+                          ],
                           "inputUiInfo": {
                             "customizedInputs": {}
-                          },
-                          "packageType": "REGISTRY",
-                          "blockVersion": "~0.0.1",
-                          "errorHandlingOptions": {
-                            "retryOnFailure": {
-                              "value": false
-                            },
-                            "continueOnFailure": {
-                              "value": false
-                            }
                           }
                         },
-                        "nextAction": {
-                          "name": "step_18",
+                        "displayName": "Approved ?",
+                        "onFailureAction": {
+                          "name": "step_14",
                           "type": "BLOCK",
                           "valid": true,
                           "settings": {
                             "input": {
-                              "auth": "{{connections['aws-prashant']}}",
-                              "dryRun": false,
-                              "account": {},
-                              "commandToRun": "aws ec2 delete-tags \\\n  --resources {{step_4['item']['InstanceId']}} \\\n  --tags Key=Action\n"
+                              "tableName": "Snapshots_30Days_Older",
+                              "rowPrimaryKey": {
+                                "rowPrimaryKey": "{{step_5['item']['SnapshotId']}}"
+                              },
+                              "fieldsProperties": {
+                                "fieldsProperties": [
+                                  {
+                                    "fieldName": "Account ID",
+                                    "newFieldValue": {
+                                      "newFieldValue": "{{step_1[0]['accountId']}}"
+                                    }
+                                  },
+                                  {
+                                    "fieldName": "Volume Size (GB)",
+                                    "newFieldValue": {
+                                      "newFieldValue": "{{step_5['item']['VolumeSize']}}"
+                                    }
+                                  },
+                                  {
+                                    "fieldName": "Marked As Older",
+                                    "newFieldValue": {
+                                      "newFieldValue": false
+                                    }
+                                  }
+                                ]
+                              }
                             },
-                            "blockName": "@openops/block-aws",
+                            "blockName": "@openops/block-openops-tables",
                             "blockType": "OFFICIAL",
-                            "actionName": "aws_cli",
+                            "actionName": "update_record",
                             "inputUiInfo": {
                               "customizedInputs": {}
                             },
                             "packageType": "REGISTRY",
-                            "blockVersion": "~0.0.3",
+                            "blockVersion": "~0.0.1",
                             "errorHandlingOptions": {
                               "retryOnFailure": {
-                                "value": false
+                                "value": true
                               },
                               "continueOnFailure": {
                                 "value": false
@@ -452,20 +423,21 @@ Please approve tagging these instances for deletion:
                             }
                           },
                           "nextAction": {
-                            "name": "step_19",
+                            "name": "step_11",
                             "type": "BLOCK",
                             "valid": true,
                             "settings": {
                               "input": {
                                 "auth": "{{connections['slack-Openops']}}",
+                                "file": null,
                                 "text": {
-                                  "text": "Tag Action=Mark_For_Deletion removed from\nInstance:- \"{{step_4['item']['InstanceId']}}\"\nAvailibility Zone:- \"{{step_4['item']['AvailabilityZone']}}\""
+                                  "text": "Fetched Snapshot with ID:- {{step_5['item']['SnapshotId']}} \nNot tagged as older"
                                 },
                                 "blocks": {},
                                 "threadTs": null,
                                 "username": null,
                                 "headerText": {
-                                  "headerText": "[Update] Tag Removed From Stopped Instance"
+                                  "headerText": "[Update] Snapshot not Tagged"
                                 },
                                 "conversationId": "C08LZL63FB9",
                                 "blockKitEnabled": false
@@ -487,63 +459,29 @@ Please approve tagging these instances for deletion:
                                 }
                               }
                             },
-                            "displayName": "Send Message"
+                            "displayName": "Notify"
                           },
-                          "displayName": "tag removed"
+                          "displayName": "Update Data Table"
                         },
-                        "displayName": "Not terminated"
-                      },
-                      "onSuccessAction": {
-                        "name": "step_9",
-                        "type": "BLOCK",
-                        "valid": true,
-                        "settings": {
-                          "input": {},
-                          "blockName": "@openops/block-approval",
-                          "blockType": "OFFICIAL",
-                          "actionName": "create_approval_links",
-                          "inputUiInfo": {
-                            "customizedInputs": {}
-                          },
-                          "packageType": "REGISTRY",
-                          "blockVersion": "~0.1.7",
-                          "errorHandlingOptions": {
-                            "retryOnFailure": {
-                              "value": true
-                            },
-                            "continueOnFailure": {
-                              "value": false
-                            }
-                          }
-                        },
-                        "nextAction": {
+                        "onSuccessAction": {
                           "name": "step_10",
                           "type": "BLOCK",
                           "valid": true,
                           "settings": {
                             "input": {
-                              "auth": "{{connections['slack-Openops']}}",
-                              "file": null,
-                              "text": {
-                                "text": "Do you want to create an AMI backup of the instance \"{{step_4['item']['InstanceId']}}\" before termination?\n<{{step_9['approvalLink']}}|Yes – Create AMI and Terminate>\n<{{step_9['disapprovalLink']}}|No – Terminate Without AMI>"
-                              },
-                              "blocks": {},
-                              "threadTs": null,
-                              "username": null,
-                              "headerText": {
-                                "headerText": null
-                              },
-                              "conversationId": "C08M6UHP33Q",
-                              "blockKitEnabled": false
+                              "auth": "{{connections['aws-prashant']}}",
+                              "dryRun": false,
+                              "account": {},
+                              "commandToRun": "aws ec2 create-tags --resources {{step_5['item']['SnapshotId']}} --tags Key=Old-Snapshot,Value=True\n"
                             },
-                            "blockName": "@openops/block-slack",
+                            "blockName": "@openops/block-aws",
                             "blockType": "OFFICIAL",
-                            "actionName": "send_slack_message",
+                            "actionName": "aws_cli",
                             "inputUiInfo": {
                               "customizedInputs": {}
                             },
                             "packageType": "REGISTRY",
-                            "blockVersion": "~0.5.2",
+                            "blockVersion": "~0.0.3",
                             "errorHandlingOptions": {
                               "retryOnFailure": {
                                 "value": true
@@ -554,19 +492,46 @@ Please approve tagging these instances for deletion:
                             }
                           },
                           "nextAction": {
-                            "name": "step_11",
+                            "name": "step_13",
                             "type": "BLOCK",
                             "valid": true,
                             "settings": {
-                              "input": {},
-                              "blockName": "@openops/block-approval",
+                              "input": {
+                                "tableName": "Snapshots_30Days_Older",
+                                "rowPrimaryKey": {
+                                  "rowPrimaryKey": "{{step_5['item']['SnapshotId']}}"
+                                },
+                                "fieldsProperties": {
+                                  "fieldsProperties": [
+                                    {
+                                      "fieldName": "Account ID",
+                                      "newFieldValue": {
+                                        "newFieldValue": "{{step_1[0]['accountId']}}"
+                                      }
+                                    },
+                                    {
+                                      "fieldName": "Volume Size (GB)",
+                                      "newFieldValue": {
+                                        "newFieldValue": "{{step_5['item']['VolumeSize']}}"
+                                      }
+                                    },
+                                    {
+                                      "fieldName": "Marked As Older",
+                                      "newFieldValue": {
+                                        "newFieldValue": true
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "blockName": "@openops/block-openops-tables",
                               "blockType": "OFFICIAL",
-                              "actionName": "wait_for_approval",
+                              "actionName": "update_record",
                               "inputUiInfo": {
                                 "customizedInputs": {}
                               },
                               "packageType": "REGISTRY",
-                              "blockVersion": "~0.1.7",
+                              "blockVersion": "~0.0.1",
                               "errorHandlingOptions": {
                                 "retryOnFailure": {
                                   "value": true
@@ -578,293 +543,59 @@ Please approve tagging these instances for deletion:
                             },
                             "nextAction": {
                               "name": "step_12",
-                              "type": "BRANCH",
+                              "type": "BLOCK",
                               "valid": true,
                               "settings": {
-                                "conditions": [
-                                  [
-                                    {
-                                      "operator": "BOOLEAN_IS_TRUE",
-                                      "firstValue": "{{step_11['approved']}}"
-                                    }
-                                  ]
-                                ],
+                                "input": {
+                                  "auth": "{{connections['slack-Openops']}}",
+                                  "file": null,
+                                  "text": {
+                                    "text": "Fetched Snapshot with ID:- {{step_5['item']['SnapshotId']}}\nis tagged as older"
+                                  },
+                                  "blocks": {},
+                                  "threadTs": null,
+                                  "username": null,
+                                  "headerText": {
+                                    "headerText": "[Update] Snapshot Tagged"
+                                  },
+                                  "conversationId": "C08LZL63FB9",
+                                  "blockKitEnabled": false
+                                },
+                                "blockName": "@openops/block-slack",
+                                "blockType": "OFFICIAL",
+                                "actionName": "send_slack_message",
                                 "inputUiInfo": {
                                   "customizedInputs": {}
+                                },
+                                "packageType": "REGISTRY",
+                                "blockVersion": "~0.5.2",
+                                "errorHandlingOptions": {
+                                  "retryOnFailure": {
+                                    "value": true
+                                  },
+                                  "continueOnFailure": {
+                                    "value": false
+                                  }
                                 }
                               },
-                              "displayName": "Condition",
-                              "onFailureAction": {
-                                "name": "step_14",
-                                "type": "BLOCK",
-                                "valid": true,
-                                "settings": {
-                                  "input": {
-                                    "auth": "{{connections['aws-prashant']}}",
-                                    "dryRun": false,
-                                    "account": {},
-                                    "commandToRun": "aws ec2 terminate-instances --instance-ids {{step_4['item']['InstanceId']}}"
-                                  },
-                                  "blockName": "@openops/block-aws",
-                                  "blockType": "OFFICIAL",
-                                  "actionName": "aws_cli",
-                                  "inputUiInfo": {
-                                    "customizedInputs": {}
-                                  },
-                                  "packageType": "REGISTRY",
-                                  "blockVersion": "~0.0.3",
-                                  "errorHandlingOptions": {
-                                    "retryOnFailure": {
-                                      "value": false
-                                    },
-                                    "continueOnFailure": {
-                                      "value": false
-                                    }
-                                  }
-                                },
-                                "nextAction": {
-                                  "name": "step_16",
-                                  "type": "BLOCK",
-                                  "valid": true,
-                                  "settings": {
-                                    "input": {
-                                      "tableName": "Stopped EC2 Instances",
-                                      "rowPrimaryKey": {
-                                        "rowPrimaryKey": "{{step_4['item']['InstanceId']}}"
-                                      },
-                                      "fieldsProperties": {
-                                        "fieldsProperties": [
-                                          {
-                                            "fieldName": "Status",
-                                            "newFieldValue": {
-                                              "newFieldValue": "Terminated"
-                                            }
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    "blockName": "@openops/block-openops-tables",
-                                    "blockType": "OFFICIAL",
-                                    "actionName": "update_record",
-                                    "inputUiInfo": {
-                                      "customizedInputs": {}
-                                    },
-                                    "packageType": "REGISTRY",
-                                    "blockVersion": "~0.0.1",
-                                    "errorHandlingOptions": {
-                                      "retryOnFailure": {
-                                        "value": true
-                                      },
-                                      "continueOnFailure": {
-                                        "value": false
-                                      }
-                                    }
-                                  },
-                                  "nextAction": {
-                                    "name": "step_21",
-                                    "type": "BLOCK",
-                                    "valid": true,
-                                    "settings": {
-                                      "input": {
-                                        "auth": "{{connections['slack-Openops']}}",
-                                        "file": null,
-                                        "text": {
-                                          "text": "EC2 Instance terminated without AMI\nInstance ID:-{{step_4['item']['InstanceId']}}"
-                                        },
-                                        "blocks": {},
-                                        "threadTs": null,
-                                        "username": null,
-                                        "headerText": {
-                                          "headerText": "[Update] EC2 Instance Terminated"
-                                        },
-                                        "conversationId": "C08LZL63FB9",
-                                        "blockKitEnabled": false
-                                      },
-                                      "blockName": "@openops/block-slack",
-                                      "blockType": "OFFICIAL",
-                                      "actionName": "send_slack_message",
-                                      "inputUiInfo": {
-                                        "customizedInputs": {}
-                                      },
-                                      "packageType": "REGISTRY",
-                                      "blockVersion": "~0.5.2",
-                                      "errorHandlingOptions": {
-                                        "retryOnFailure": {
-                                          "value": true
-                                        },
-                                        "continueOnFailure": {
-                                          "value": false
-                                        }
-                                      }
-                                    },
-                                    "displayName": "Send Message"
-                                  },
-                                  "displayName": "Terminated"
-                                },
-                                "displayName": "terminate"
-                              },
-                              "onSuccessAction": {
-                                "name": "step_13",
-                                "type": "BLOCK",
-                                "valid": true,
-                                "settings": {
-                                  "input": {
-                                    "auth": "{{connections['aws-prashant']}}",
-                                    "dryRun": false,
-                                    "account": {},
-                                    "commandToRun": "aws ec2 create-image \\\n  --instance-id {{step_4['item']['InstanceId']}} \\\n  --name \"{{step_4['item']['Name']}}-AMI-by-OpenOps\" \\\n  --no-reboot\n"
-                                  },
-                                  "blockName": "@openops/block-aws",
-                                  "blockType": "OFFICIAL",
-                                  "actionName": "aws_cli",
-                                  "inputUiInfo": {
-                                    "customizedInputs": {}
-                                  },
-                                  "packageType": "REGISTRY",
-                                  "blockVersion": "~0.0.3",
-                                  "errorHandlingOptions": {
-                                    "retryOnFailure": {
-                                      "value": false
-                                    },
-                                    "continueOnFailure": {
-                                      "value": false
-                                    }
-                                  }
-                                },
-                                "nextAction": {
-                                  "name": "step_15",
-                                  "type": "BLOCK",
-                                  "valid": true,
-                                  "settings": {
-                                    "input": {
-                                      "auth": "{{connections['aws-prashant']}}",
-                                      "dryRun": false,
-                                      "account": {},
-                                      "commandToRun": "aws ec2 terminate-instances --instance-ids {{step_4['item']['InstanceId']}}\n"
-                                    },
-                                    "blockName": "@openops/block-aws",
-                                    "blockType": "OFFICIAL",
-                                    "actionName": "aws_cli",
-                                    "inputUiInfo": {
-                                      "customizedInputs": {}
-                                    },
-                                    "packageType": "REGISTRY",
-                                    "blockVersion": "~0.0.3",
-                                    "errorHandlingOptions": {
-                                      "retryOnFailure": {
-                                        "value": false
-                                      },
-                                      "continueOnFailure": {
-                                        "value": false
-                                      }
-                                    }
-                                  },
-                                  "nextAction": {
-                                    "name": "step_22",
-                                    "type": "BLOCK",
-                                    "valid": true,
-                                    "settings": {
-                                      "input": {
-                                        "tableName": "Stopped EC2 Instances",
-                                        "rowPrimaryKey": {
-                                          "rowPrimaryKey": "{{step_4['item']['InstanceId']}}"
-                                        },
-                                        "fieldsProperties": {
-                                          "fieldsProperties": [
-                                            {
-                                              "fieldName": "AMI ID",
-                                              "newFieldValue": {
-                                                "newFieldValue": "{{step_13['ImageId']}}"
-                                              }
-                                            },
-                                            {
-                                              "fieldName": "Status",
-                                              "newFieldValue": {
-                                                "newFieldValue": "Terminated"
-                                              }
-                                            }
-                                          ]
-                                        }
-                                      },
-                                      "blockName": "@openops/block-openops-tables",
-                                      "blockType": "OFFICIAL",
-                                      "actionName": "update_record",
-                                      "inputUiInfo": {
-                                        "customizedInputs": {}
-                                      },
-                                      "packageType": "REGISTRY",
-                                      "blockVersion": "~0.0.1",
-                                      "errorHandlingOptions": {
-                                        "retryOnFailure": {
-                                          "value": false
-                                        },
-                                        "continueOnFailure": {
-                                          "value": false
-                                        }
-                                      }
-                                    },
-                                    "nextAction": {
-                                      "name": "step_20",
-                                      "type": "BLOCK",
-                                      "valid": true,
-                                      "settings": {
-                                        "input": {
-                                          "auth": "{{connections['slack-Openops']}}",
-                                          "file": null,
-                                          "text": {
-                                            "text": "Ec2 instance terminated with creation of AMI\nInstance ID:- {{step_4['item']['InstanceId']}}\nAMI:- {{step_13['ImageId']}}"
-                                          },
-                                          "blocks": {},
-                                          "threadTs": null,
-                                          "username": null,
-                                          "headerText": {
-                                            "headerText": "[Update] Instance Terminated and AMI created"
-                                          },
-                                          "conversationId": "C08LZL63FB9",
-                                          "blockKitEnabled": false
-                                        },
-                                        "blockName": "@openops/block-slack",
-                                        "blockType": "OFFICIAL",
-                                        "actionName": "send_slack_message",
-                                        "inputUiInfo": {
-                                          "customizedInputs": {}
-                                        },
-                                        "packageType": "REGISTRY",
-                                        "blockVersion": "~0.5.2",
-                                        "errorHandlingOptions": {
-                                          "retryOnFailure": {
-                                            "value": false
-                                          },
-                                          "continueOnFailure": {
-                                            "value": false
-                                          }
-                                        }
-                                      },
-                                      "displayName": "Send Message"
-                                    },
-                                    "displayName": "terminated with ami id"
-                                  },
-                                  "displayName": "terminate"
-                                },
-                                "displayName": "ami"
-                              }
+                              "displayName": "Notify"
                             },
-                            "displayName": "Wait for Approval"
+                            "displayName": "Update Data Table"
                           },
-                          "displayName": "Send Message"
-                        },
-                        "displayName": "Create Approval Links"
-                      }
+                          "displayName": "Add Tag"
+                        }
+                      },
+                      "displayName": "Wait for Approval"
                     },
-                    "displayName": "Wait for Approval"
+                    "displayName": "Approval Notification"
                   },
-                  "displayName": "Send Message"
-                },
-                "displayName": "Create Approval Links"
+                  "displayName": "Create Approval Links"
+                }
               }
-            }
+            },
+            "displayName": "Fetch Old Snapshots"
           },
-          "displayName": "Fetch Marked Instances"
+          "displayName": "CUSTOM_XDAYS"
         },
         "displayName": "Get Account ID"
       }
@@ -891,9 +622,9 @@ Please approve tagging these instances for deletion:
 1. **Configure AWS Connection**: Ensure AWS credentials or IAM Role with required permissions are properly set in OpenOps connection.
 2. **Configure Slack Channels**: Make sure Slack tokens and channel IDs are correctly configured.
 3. **Import Workflow**: Upload the exported JSON into your OpenOps environment.
-4. **Monitor**: Monitor Slack for approval requests and notifications. Track instance statuses via the "Stopped EC2 Instances" table in OpenOps.
+4. **Monitor**: Monitor Slack for approval requests and notifications related to EBS snapshots. Track snapshot statuses via the "Snapshots_30Days_Older" table in OpenOps.
 ---
 
 ## Conclusion
 
-This workflow provides a streamlined and auditable process for managing stopped EC2 instances via team approvals and tagging. It helps optimize AWS costs and enhances operational transparency. The workflow can be further extended with automatic instance cleanup or integrated into a broader cost governance framework for enhanced control and efficiency.
+This workflow provides a streamlined and auditable process for managing older EBS snapshots through team approvals and tagging. It helps optimize AWS storage costs and enhances operational transparency. The workflow can be further extended with automatic snapshot cleanup or integrated into a broader cost governance framework for improved control and efficiency.
